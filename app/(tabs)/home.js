@@ -14,6 +14,7 @@ import {
   Linking,
 } from "react-native"
 import { useRouter } from "expo-router"
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { typography } from "../constants/fonts"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { BlurView } from "expo-blur"
@@ -114,12 +115,29 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showEmergencyPopup, setShowEmergencyPopup] = useState(false)
   const [searchPlaceholder, setSearchPlaceholder] = useState("")
+  const [userName, setUserName] = useState("User")
   const bellAnim = useRef(new Animated.Value(0)).current
   const sirenAnim = useRef(new Animated.Value(0)).current
   const introBoxWidth = useRef(new Animated.Value(32)).current
   const introBoxOpacity = useRef(new Animated.Value(0)).current
   const introTextOpacity = useRef(new Animated.Value(0)).current
   const [introText, setIntroText] = useState("")
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const userDataString = await AsyncStorage.getItem('userData');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        setUserName(userData.name || "User");
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
 
   useEffect(() => {
     const shakeAnimation = Animated.sequence([
@@ -877,5 +895,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
+  greetingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  greetingText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#000",
+    marginRight: 8,
+  },
+  nameText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#000",
+  },
 })
-
