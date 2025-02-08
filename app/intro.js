@@ -1,53 +1,67 @@
-"use client"
+"use client";
+import { useEffect, useRef } from "react";
+import { View, StyleSheet, TouchableOpacity, Dimensions, Animated, Easing, Text } from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
-import { useEffect, useRef } from "react"
-import { View, StyleSheet, TouchableOpacity, Dimensions, Animated, Easing, Text } from "react-native"
-import { useRouter } from "expo-router"
-import { LinearGradient } from "expo-linear-gradient"
-
-const { width, height } = Dimensions.get("window")
+const { width, height } = Dimensions.get("window");
 
 // Adjusted dimensions for bigger logos at bottom
-const CAROUSEL_WIDTH = width
-const CAROUSEL_HEIGHT = 120
-const LOGO_WIDTH = 400
-const LOGO_HEIGHT = 100
+const CAROUSEL_WIDTH = width;
+const CAROUSEL_HEIGHT = 120;
+const LOGO_WIDTH = 180; // Further reduced logo width for smaller gaps
+const LOGO_HEIGHT = 70;
 
 const logos = [
   require("../assets/hospital-logos/avs.png"),
   require("../assets/hospital-logos/almas.png"),
   require("../assets/hospital-logos/aster.png"),
   require("../assets/hospital-logos/hms.png"),
-]
+];
 
 export default function AnimatedLogo() {
-  const router = useRouter()
-  const carouselPosition = useRef(new Animated.Value(0)).current
-  const signInArrowRotation = useRef(new Animated.Value(0)).current
-  const signUpArrowRotation = useRef(new Animated.Value(0)).current
+  const router = useRouter();
+  const carouselPosition = useRef(new Animated.Value(0)).current;
+  const signInArrowRotation = useRef(new Animated.Value(0)).current;
+  const signUpArrowRotation = useRef(new Animated.Value(0)).current;
+  const typingAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const animateCarousel = () => {
       Animated.loop(
+        Animated.timing(carouselPosition, {
+          toValue: -LOGO_WIDTH * logos.length,
+          duration: 8000, // Faster animation for smoother loop
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start(() => {
+        carouselPosition.setValue(0); // Reset position for seamless loop
+      });
+    };
+
+    const animateTypingEffect = () => {
+      Animated.loop(
         Animated.sequence([
-          Animated.timing(carouselPosition, {
-            toValue: -LOGO_WIDTH * logos.length,
-            duration: 20000,
+          Animated.timing(typingAnimation, {
+            toValue: 1,
+            duration: 2000,
             easing: Easing.linear,
             useNativeDriver: true,
           }),
-          Animated.timing(carouselPosition, {
+          Animated.timing(typingAnimation, {
             toValue: 0,
-            duration: 0,
+            duration: 2000,
+            easing: Easing.linear,
             useNativeDriver: true,
           }),
-        ]),
-        { iterations: -1 }
-      ).start()
-    }
+        ])
+      ).start();
+    };
 
-    animateCarousel()
-  }, [carouselPosition])
+    animateCarousel();
+    animateTypingEffect();
+  }, [carouselPosition]);
 
   const animateButtonPress = (arrowRotation, callback) => {
     Animated.sequence([
@@ -63,19 +77,41 @@ export default function AnimatedLogo() {
         easing: Easing.linear,
         useNativeDriver: true,
       }),
-    ]).start(() => callback())
-  }
+    ]).start(() => callback());
+  };
 
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#000033", "#000066", "#0000FF"]} style={styles.gradient} />
 
+      {/* Heading */}
+      <Animated.Text
+        style={[
+          styles.heading,
+          {
+            opacity: typingAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 1],
+            }),
+            transform: [
+              {
+                scale: typingAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.9, 1], // Slight scaling effect
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        Book Doctors from Hospitals in Kottakkal
+      </Animated.Text>
+
       {/* Carousel Container */}
       <View style={styles.carouselWrapper}>
         <View style={styles.carouselContainer}>
           <Animated.View style={[styles.carousel, { transform: [{ translateX: carouselPosition }] }]}>
-            {/* Double the logos for seamless loop */}
-            {[...logos, ...logos, ...logos].map((logo, index) => (
+            {[...logos, ...logos].map((logo, index) => (
               <Animated.Image
                 key={index}
                 source={logo}
@@ -84,11 +120,11 @@ export default function AnimatedLogo() {
                   {
                     opacity: carouselPosition.interpolate({
                       inputRange: [
-                        -LOGO_WIDTH * (index + 1.5),
+                        -LOGO_WIDTH * (index + 1),
                         -LOGO_WIDTH * index,
-                        -LOGO_WIDTH * (index - 1.5)
+                        -LOGO_WIDTH * (index - 1),
                       ],
-                      outputRange: [0, 1, 0],
+                      outputRange: [0, 1, 0], // Fade in and out
                       extrapolate: "clamp",
                     }),
                   },
@@ -105,7 +141,9 @@ export default function AnimatedLogo() {
         <TouchableOpacity
           style={[styles.button, styles.signInButton]}
           onPress={() => {
-            animateButtonPress(signInArrowRotation, () => router.replace("/auth/login?form=signin"))
+            animateButtonPress(signInArrowRotation, () =>
+              router.replace("/auth/login?form=signin")
+            );
           }}
         >
           <Text style={styles.buttonText}>Sign In</Text>
@@ -127,11 +165,12 @@ export default function AnimatedLogo() {
             <Text style={styles.arrow}>→</Text>
           </Animated.View>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.button, styles.signUpButton]}
           onPress={() => {
-            animateButtonPress(signUpArrowRotation, () => router.replace("/auth/login?form=signup"))
+            animateButtonPress(signUpArrowRotation, () =>
+              router.replace("/auth/login?form=signup")
+            );
           }}
         >
           <Text style={[styles.buttonText, styles.signUpText]}>Sign Up</Text>
@@ -155,7 +194,7 @@ export default function AnimatedLogo() {
         </TouchableOpacity>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -170,12 +209,23 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
+  heading: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    marginTop: 50,
+    marginBottom: 20,
+    textShadowColor: "rgba(0, 0, 0, 0.5)", // Blur effect
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 5,
+  },
   carouselWrapper: {
     height: CAROUSEL_HEIGHT,
-    position: 'absolute',
+    position: "absolute",
     bottom: 150,
     left: 0,
-    right: 0,
+    right: 30,
     overflow: "hidden",
   },
   carouselContainer: {
@@ -185,7 +235,7 @@ const styles = StyleSheet.create({
   carousel: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 1,
+    gap: 5, // Reduced gap further
   },
   logo: {
     width: LOGO_WIDTH,
@@ -241,4 +291,4 @@ const styles = StyleSheet.create({
   signUpArrow: {
     color: "#fff",
   },
-})
+});
