@@ -7,11 +7,11 @@ import { LinearGradient } from "expo-linear-gradient"
 
 const { width, height } = Dimensions.get("window")
 
-// Adjusted dimensions to match the reference design
+// Adjusted dimensions for bigger logos at bottom
 const CAROUSEL_WIDTH = width
-const CAROUSEL_HEIGHT = 60
-const LOGO_WIDTH = 180
-const LOGO_HEIGHT = 40
+const CAROUSEL_HEIGHT = 120
+const LOGO_WIDTH = 400
+const LOGO_HEIGHT = 100
 
 const logos = [
   require("../assets/hospital-logos/avs.png"),
@@ -32,7 +32,7 @@ export default function AnimatedLogo() {
         Animated.sequence([
           Animated.timing(carouselPosition, {
             toValue: -LOGO_WIDTH * logos.length,
-            duration: 15000,
+            duration: 20000,
             easing: Easing.linear,
             useNativeDriver: true,
           }),
@@ -42,6 +42,7 @@ export default function AnimatedLogo() {
             useNativeDriver: true,
           }),
         ]),
+        { iterations: -1 }
       ).start()
     }
 
@@ -71,13 +72,6 @@ export default function AnimatedLogo() {
 
       {/* Carousel Container */}
       <View style={styles.carouselWrapper}>
-        <LinearGradient
-          colors={["rgba(0,0,0,1)", "rgba(0,0,0,0)"]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 0.2, y: 0.5 }}
-          style={styles.fadeGradientLeft}
-        />
-
         <View style={styles.carouselContainer}>
           <Animated.View style={[styles.carousel, { transform: [{ translateX: carouselPosition }] }]}>
             {/* Double the logos for seamless loop */}
@@ -89,8 +83,12 @@ export default function AnimatedLogo() {
                   styles.logo,
                   {
                     opacity: carouselPosition.interpolate({
-                      inputRange: [-LOGO_WIDTH * (index + 1), -LOGO_WIDTH * index, -LOGO_WIDTH * (index - 1)],
-                      outputRange: [0.3, 1, 0.3],
+                      inputRange: [
+                        -LOGO_WIDTH * (index + 1.5),
+                        -LOGO_WIDTH * index,
+                        -LOGO_WIDTH * (index - 1.5)
+                      ],
+                      outputRange: [0, 1, 0],
                       extrapolate: "clamp",
                     }),
                   },
@@ -100,13 +98,6 @@ export default function AnimatedLogo() {
             ))}
           </Animated.View>
         </View>
-
-        <LinearGradient
-          colors={["rgba(0,0,0,0)", "rgba(0,0,0,1)"]}
-          start={{ x: 0.8, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.fadeGradientRight}
-        />
       </View>
 
       {/* Footer with Sign In and Sign Up Buttons */}
@@ -177,46 +168,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: "100%",
+    bottom: 0,
   },
   carouselWrapper: {
-    position: "absolute",
-    top: 50,
-    width: "100%",
     height: CAROUSEL_HEIGHT,
-    backgroundColor: "transparent",
+    position: 'absolute',
+    bottom: 150,
+    left: 0,
+    right: 0,
+    overflow: "hidden",
   },
   carouselContainer: {
-    width: "100%",
     height: CAROUSEL_HEIGHT,
-    overflow: "hidden",
+    justifyContent: "center",
   },
   carousel: {
     flexDirection: "row",
     alignItems: "center",
-    height: "100%",
+    gap: 1,
   },
   logo: {
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
-    marginHorizontal: 20,
-    opacity: 0.7,
-  },
-  fadeGradientLeft: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 100,
-    zIndex: 2,
-  },
-  fadeGradientRight: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 100,
-    zIndex: 2,
   },
   footer: {
     flexDirection: "row",
@@ -269,4 +242,3 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 })
-
