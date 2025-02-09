@@ -38,12 +38,14 @@ export default function AnimatedLogo() {
   const centerPoint = width / 2;
 
   useEffect(() => {
-    Animated.timing(textFadeIn, {
-      toValue: 1,
-      duration: 2500,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(textFadeIn, {
+        toValue: 1,
+        duration: 2500,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     const animateCarousel = () => {
       carouselPosition.setValue(0);
@@ -56,6 +58,9 @@ export default function AnimatedLogo() {
             useNativeDriver: true,
           }),
         ]),
+        {
+          iterations: -1,
+        }
       ).start();
     };
 
@@ -71,7 +76,7 @@ export default function AnimatedLogo() {
     for (let i = -2; i <= logos.length + 2; i++) {
       const position = i * (LOGO_WIDTH + LOGO_SPACING);
       inputRange.push(position);
-      // Calculate opacity based on distance from center
+      // Original opacity values
       outputRange.push(i === 0 ? 1 : 0.3);
     }
 
@@ -122,7 +127,7 @@ export default function AnimatedLogo() {
   }
 
   // Create a duplicated array of logos for seamless looping
-  const extendedLogos = [...logos, ...logos, ...logos];
+  const extendedLogos = [...logos, ...logos, ...logos, ...logos, ...logos];  
 
   return (
     <View style={styles.container}>
@@ -147,13 +152,7 @@ export default function AnimatedLogo() {
       >
         <BlurView intensity={20} tint="dark" style={styles.blurContainer}>
           <Text style={styles.heading}>
-            Book Doctors{'\n'}
-            from Hospitals{'\n'}
-            in Kottakkal
-          </Text>
-          <Text style={styles.subHeading}>
-            Find the best doctors and hospitals
-            near you. Book appointments easily
+            Book Doctors in Kottakkal
           </Text>
         </BlurView>
       </Animated.View>
@@ -289,22 +288,15 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 40,
+    fontSize: 36,
     color: "#fff",
-    textAlign: "left",
+    textAlign: "center",
     marginBottom: 15,
-    lineHeight: 40,
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 5,
-  },
-  subHeading: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-    color: "#fff",
-    textAlign: "left",
-    marginBottom: 40,
-    lineHeight: 24,
+    lineHeight: 44,
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0, 0, 255, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   carouselWrapper: {
     height: CAROUSEL_HEIGHT,
