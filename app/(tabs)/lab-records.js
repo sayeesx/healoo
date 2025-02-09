@@ -788,7 +788,7 @@ const LabRecords = React.memo(
                 {record.viewed ? (
                   <Icon name="eye-check" size={24} color="#28A745" />
                 ) : (
-                  <Icon name="eye-outline" size={24} color="#6C757D" />
+                  <Icon name="eye-outline" size={24} color="#FF4444" />
                 )}
               </View>
             </View>
