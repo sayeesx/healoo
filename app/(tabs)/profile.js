@@ -67,7 +67,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('userData');
-      router.replace('/(auth)/login');
+      router.replace('./(auth)/login');
     } catch (error) {
       console.error('Error during logout:', error);
     }

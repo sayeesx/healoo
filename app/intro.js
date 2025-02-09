@@ -3,14 +3,16 @@ import { useEffect, useRef } from "react";
 import { View, StyleSheet, TouchableOpacity, Dimensions, Animated, Easing, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { useFonts, Inter_700Bold } from '@expo-google-fonts/inter';
 
 const { width, height } = Dimensions.get("window");
 
-// Adjusted dimensions for bigger logos at bottom
 const CAROUSEL_WIDTH = width;
-const CAROUSEL_HEIGHT = 120;
-const LOGO_WIDTH = 180; // Further reduced logo width for smaller gaps
-const LOGO_HEIGHT = 70;
+const CAROUSEL_HEIGHT = 200;
+const LOGO_WIDTH = 200;
+const LOGO_HEIGHT = 100;
+const LOGO_SPACING = 20;
 
 const logos = [
   require("../assets/hospital-logos/avs.png"),
@@ -22,176 +24,243 @@ const logos = [
 export default function AnimatedLogo() {
   const router = useRouter();
   const carouselPosition = useRef(new Animated.Value(0)).current;
+  const textFadeIn = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
   const signInArrowRotation = useRef(new Animated.Value(0)).current;
   const signUpArrowRotation = useRef(new Animated.Value(0)).current;
-  const typingAnimation = useRef(new Animated.Value(0)).current;
+
+  const [fontsLoaded] = useFonts({
+    Inter_700Bold,
+  });
+
+  // Calculate total width of all logos plus spacing
+  const totalWidth = (LOGO_WIDTH + LOGO_SPACING) * logos.length;
+  const centerPoint = width / 2;
 
   useEffect(() => {
-    const animateCarousel = () => {
-      Animated.loop(
-        Animated.timing(carouselPosition, {
-          toValue: -LOGO_WIDTH * logos.length,
-          duration: 8000, // Faster animation for smoother loop
-          easing: Easing.linear,
-          useNativeDriver: true,
-        })
-      ).start(() => {
-        carouselPosition.setValue(0); // Reset position for seamless loop
-      });
-    };
+    Animated.timing(textFadeIn, {
+      toValue: 1,
+      duration: 2500,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true,
+    }).start();
 
-    const animateTypingEffect = () => {
+    const animateCarousel = () => {
+      carouselPosition.setValue(0);
       Animated.loop(
         Animated.sequence([
-          Animated.timing(typingAnimation, {
-            toValue: 1,
-            duration: 2000,
+          Animated.timing(carouselPosition, {
+            toValue: -totalWidth,
+            duration: 15000,
             easing: Easing.linear,
             useNativeDriver: true,
           }),
-          Animated.timing(typingAnimation, {
-            toValue: 0,
-            duration: 2000,
-            easing: Easing.linear,
-            useNativeDriver: true,
-          }),
-        ])
+        ]),
       ).start();
     };
 
     animateCarousel();
-    animateTypingEffect();
-  }, [carouselPosition]);
+  }, []);
+
+  const getOpacityStyle = (index) => {
+    const inputRange = [];
+    const outputRange = [];
+    const itemPosition = index * (LOGO_WIDTH + LOGO_SPACING);
+    
+    // Create a range of positions for opacity interpolation
+    for (let i = -2; i <= logos.length + 2; i++) {
+      const position = i * (LOGO_WIDTH + LOGO_SPACING);
+      inputRange.push(position);
+      // Calculate opacity based on distance from center
+      outputRange.push(i === 0 ? 1 : 0.3);
+    }
+
+    return {
+      opacity: carouselPosition.interpolate({
+        inputRange: inputRange.map(x => x - centerPoint + LOGO_WIDTH / 2),
+        outputRange,
+        extrapolate: 'clamp'
+      })
+    };
+  };
 
   const animateButtonPress = (arrowRotation, callback) => {
-    Animated.sequence([
-      Animated.timing(arrowRotation, {
-        toValue: 1,
-        duration: 200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-      Animated.timing(arrowRotation, {
-        toValue: 0,
-        duration: 200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ]).start(() => callback());
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(buttonScale, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(arrowRotation, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(arrowRotation, {
+          toValue: 0,
+          duration: 200,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      setTimeout(callback, 200);
+    });
   };
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  // Create a duplicated array of logos for seamless looping
+  const extendedLogos = [...logos, ...logos, ...logos];
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#000033", "#000066", "#0000FF"]} style={styles.gradient} />
+      <LinearGradient colors={["#000033", "#000"]} style={styles.gradient} />
 
-      {/* Heading */}
-      <Animated.Text
+      {/* Animated Text Container */}
+      <Animated.View
         style={[
-          styles.heading,
+          styles.textContainer,
           {
-            opacity: typingAnimation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 1],
-            }),
+            opacity: textFadeIn,
             transform: [
               {
-                scale: typingAnimation.interpolate({
+                translateY: textFadeIn.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.9, 1], // Slight scaling effect
+                  outputRange: [20, 0],
                 }),
               },
             ],
           },
         ]}
       >
-        Book Doctors from Hospitals in Kottakkal
-      </Animated.Text>
+        <BlurView intensity={20} tint="dark" style={styles.blurContainer}>
+          <Text style={styles.heading}>
+            Book Doctors{'\n'}
+            from Hospitals{'\n'}
+            in Kottakkal
+          </Text>
+          <Text style={styles.subHeading}>
+            Find the best doctors and hospitals
+            near you. Book appointments easily
+          </Text>
+        </BlurView>
+      </Animated.View>
 
       {/* Carousel Container */}
       <View style={styles.carouselWrapper}>
-        <View style={styles.carouselContainer}>
-          <Animated.View style={[styles.carousel, { transform: [{ translateX: carouselPosition }] }]}>
-            {[...logos, ...logos].map((logo, index) => (
+        <LinearGradient
+          colors={['#000', 'transparent']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 0.15, y: 0.5 }}
+          style={styles.gradientFade}
+        />
+        
+        <Animated.View
+          style={[
+            styles.carouselContainer,
+            {
+              transform: [{ translateX: carouselPosition }],
+            },
+          ]}
+        >
+          <View style={styles.carousel}>
+            {extendedLogos.map((logo, index) => (
               <Animated.Image
-                key={index}
+                key={`${index}-${logo}`}
                 source={logo}
                 style={[
                   styles.logo,
-                  {
-                    opacity: carouselPosition.interpolate({
-                      inputRange: [
-                        -LOGO_WIDTH * (index + 1),
-                        -LOGO_WIDTH * index,
-                        -LOGO_WIDTH * (index - 1),
-                      ],
-                      outputRange: [0, 1, 0], // Fade in and out
-                      extrapolate: "clamp",
-                    }),
-                  },
+                  getOpacityStyle(index),
                 ]}
                 resizeMode="contain"
               />
             ))}
-          </Animated.View>
-        </View>
+          </View>
+        </Animated.View>
+
+        <LinearGradient
+          colors={['transparent', '#000']}
+          start={{ x: 0.85, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={[styles.gradientFade, { right: 0 }]}
+        />
       </View>
 
-      {/* Footer with Sign In and Sign Up Buttons */}
+      {/* Footer with Animated Buttons */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.button, styles.signInButton]}
-          onPress={() => {
-            animateButtonPress(signInArrowRotation, () =>
-              router.replace("/auth/login?form=signin")
-            );
-          }}
-        >
-          <Text style={styles.buttonText}>Sign In</Text>
-          <Animated.View
-            style={[
-              styles.arrowContainer,
-              {
-                transform: [
-                  {
-                    rotate: signInArrowRotation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0deg", "45deg"],
-                    }),
-                  },
-                ],
-              },
-            ]}
+        <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+          <TouchableOpacity
+            style={[styles.button, styles.signInButton]}
+            onPress={() =>
+              animateButtonPress(signInArrowRotation, () =>
+                router.replace("/auth/login?form=signin")
+              )
+            }
+            activeOpacity={0.8}
           >
-            <Text style={styles.arrow}>→</Text>
-          </Animated.View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.signUpButton]}
-          onPress={() => {
-            animateButtonPress(signUpArrowRotation, () =>
-              router.replace("/auth/login?form=signup")
-            );
-          }}
-        >
-          <Text style={[styles.buttonText, styles.signUpText]}>Sign Up</Text>
-          <Animated.View
-            style={[
-              styles.arrowContainer,
-              {
-                transform: [
-                  {
-                    rotate: signUpArrowRotation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0deg", "45deg"],
-                    }),
-                  },
-                ],
-              },
-            ]}
+            <Text style={styles.buttonText}>Sign In  </Text>
+            <Animated.View
+              style={[
+                styles.arrowContainer,
+                {
+                  transform: [
+                    {
+                      rotate: signInArrowRotation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["0deg", "90deg"],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Text style={styles.arrow}>→</Text>
+            </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+          <TouchableOpacity
+            style={[styles.button, styles.signUpButton]}
+            onPress={() =>
+              animateButtonPress(signUpArrowRotation, () =>
+                router.replace("/auth/login?form=signup")
+              )
+            }
+            activeOpacity={0.8}
           >
-            <Text style={[styles.arrow, styles.signUpArrow]}>→</Text>
-          </Animated.View>
-        </TouchableOpacity>
+            <Text style={[styles.buttonText, styles.signUpText]}>Sign Up</Text>
+            <Animated.View
+              style={[
+                styles.arrowContainer,
+                {
+                  transform: [
+                    {
+                      rotate: signUpArrowRotation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["0deg", "90deg"],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Text style={[styles.arrow, styles.signUpArrow]}>→</Text>
+            </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </View>
   );
@@ -209,37 +278,62 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
   },
-  heading: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
+  textContainer: {
     marginTop: 50,
-    marginBottom: 20,
-    textShadowColor: "rgba(0, 0, 0, 0.5)", // Blur effect
+    paddingHorizontal: 20,
+  },
+  blurContainer: {
+    padding: 20,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  heading: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 40,
+    color: "#fff",
+    textAlign: "left",
+    marginBottom: 15,
+    lineHeight: 40,
+    textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,
+  },
+  subHeading: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: "#fff",
+    textAlign: "left",
+    marginBottom: 40,
+    lineHeight: 24,
   },
   carouselWrapper: {
     height: CAROUSEL_HEIGHT,
     position: "absolute",
     bottom: 150,
     left: 0,
-    right: 30,
+    right: 0,
     overflow: "hidden",
   },
+  gradientFade: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: width * 0.15,
+    zIndex: 1,
+  },
   carouselContainer: {
+    flexDirection: "row",
     height: CAROUSEL_HEIGHT,
-    justifyContent: "center",
   },
   carousel: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5, // Reduced gap further
+    gap: LOGO_SPACING,
   },
   logo: {
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
+    borderRadius: 10,
   },
   footer: {
     flexDirection: "row",
@@ -255,9 +349,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginHorizontal: 8,
+    paddingHorizontal: 30,
+    borderRadius: 35,
+    marginHorizontal: 10,
   },
   signInButton: {
     backgroundColor: "#fff",
@@ -268,6 +362,7 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
   buttonText: {
+    fontFamily: 'Inter_700Bold',
     fontSize: 16,
     fontWeight: "bold",
     color: "#000",
