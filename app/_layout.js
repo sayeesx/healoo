@@ -9,6 +9,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { View, ActivityIndicator } from 'react-native';
+import { UserProvider } from './context/UserContext';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -31,19 +32,21 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: 'fade',
-          animationDuration: 200,
-          contentStyle: { backgroundColor: 'white' }
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-      </Stack>
-    </SafeAreaProvider>
+    <UserProvider>
+      <SafeAreaProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'fade',
+            animationDuration: 200,
+            contentStyle: { backgroundColor: 'white' }
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        </Stack>
+      </SafeAreaProvider>
+    </UserProvider>
   );
 }
