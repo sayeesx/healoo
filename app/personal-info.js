@@ -31,11 +31,10 @@ export default function PersonalInfo() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  const [userData, setUserData] = useState(contextUserData);
-  const [editedData, setEditedData] = useState({...contextUserData});
   const [showHeightPicker, setShowHeightPicker] = useState(false);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
+  
+  const [editedData, setEditedData] = useState({...contextUserData});
 
   const personalDetails = [
     { icon: "account", label: "Full Name", key: "name" },
@@ -45,7 +44,8 @@ export default function PersonalInfo() {
     { icon: "map-marker", label: "Address", key: "address" },
     { icon: "gender-male-female", label: "Gender", key: "gender", options: ["Male", "Female", "Other"] },
     { icon: "human-male-height", label: "Height (cm)", key: "height" },
-    { icon: "weight", label: "Weight (kg)", key: "weight" }
+    { icon: "weight", label: "Weight (kg)", key: "weight" },
+    { icon: "water", label: "Blood Type", key: "bloodType", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] }
   ];
 
   const handleDateChange = (event, selectedDate) => {
@@ -321,18 +321,6 @@ export default function PersonalInfo() {
         Alert.alert('Error', 'Please enter a valid email');
         return;
       }
-      if (!editedData.phone) {
-        Alert.alert('Error', 'Phone number is required');
-        return;
-      }
-      if (editedData.height && (isNaN(editedData.height) || editedData.height < 0)) {
-        Alert.alert('Error', 'Please enter a valid height');
-        return;
-      }
-      if (editedData.weight && (isNaN(editedData.weight) || editedData.weight < 0)) {
-        Alert.alert('Error', 'Please enter a valid weight');
-        return;
-      }
 
       // Generate new patient ID based on name and DOB
       const nameParts = editedData.name.split(' ');
@@ -351,7 +339,6 @@ export default function PersonalInfo() {
       updateUserData(updatedData);
       setIsEditing(false);
 
-      // Show success message and navigate back
       Alert.alert('Success', 'Profile updated successfully', [
         {
           text: 'OK',
@@ -377,11 +364,10 @@ export default function PersonalInfo() {
         <Text style={styles.headerTitle}>Personal Information</Text>
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => isEditing ? handleSave() : setIsEditing(true)}
-          disabled={isLoading}
+          onPress={() => setIsEditing(!isEditing)}
         >
           <Text style={styles.editButtonText}>
-            {isLoading ? "Saving..." : (isEditing ? "Save" : "Edit")}
+            {isEditing ? 'Save' : 'Edit'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -427,12 +413,12 @@ export default function PersonalInfo() {
                 ) : (
                   <Text style={styles.value}>
                     {item.key === 'dateOfBirth' 
-                      ? moment(userData[item.key]).format('MMMM D, YYYY')
+                      ? moment(contextUserData[item.key]).format('MMMM D, YYYY')
                       : item.key === 'height'
-                      ? `${userData[item.key]} cm`
+                      ? `${contextUserData[item.key]} cm`
                       : item.key === 'weight'
-                      ? `${userData[item.key]} kg`
-                      : userData[item.key]}
+                      ? `${contextUserData[item.key]} kg`
+                      : contextUserData[item.key]}
                   </Text>
                 )}
               </View>
