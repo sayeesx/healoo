@@ -4,11 +4,11 @@ import { LogBox } from 'react-native';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
-import Toast from 'react-native-toast-message';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Toast, { BaseToast } from 'react-native-toast-message';
 
 // Enable screens
 enableScreens(true);
@@ -22,6 +22,34 @@ LogBox.ignoreLogs([
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+const toastConfig = {
+  success: (props) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: '#3B39E4', backgroundColor: '#FFFFFF' }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: '600'
+      }}
+      text2Style={{
+        fontSize: 14
+      }}
+    />
+  ),
+  error: ({ text1, text2, ...rest }) => (
+    <Toast.ErrorToast
+      {...rest}
+      style={styles.errorToast}
+      contentContainerStyle={styles.toastContainer}
+      text1Style={styles.toastTitle}
+      text2Style={styles.toastMessage}
+      text1={text1}
+      text2={text2}
+    />
+  ),
+};
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -46,32 +74,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Slot />
       <StatusBar style="auto" />
-      <Toast 
-        config={{
-          success: ({ text1, text2, ...rest }) => (
-            <Toast.BaseToast
-              {...rest}
-              style={styles.successToast}
-              contentContainerStyle={styles.toastContainer}
-              text1Style={styles.toastTitle}
-              text2Style={styles.toastMessage}
-              text1={text1}
-              text2={text2}
-            />
-          ),
-          error: ({ text1, text2, ...rest }) => (
-            <Toast.ErrorToast
-              {...rest}
-              style={styles.errorToast}
-              contentContainerStyle={styles.toastContainer}
-              text1Style={styles.toastTitle}
-              text2Style={styles.toastMessage}
-              text1={text1}
-              text2={text2}
-            />
-          ),
-        }}
-      />
+      <Toast config={toastConfig} />
     </GestureHandlerRootView>
   );
 }

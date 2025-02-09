@@ -13,17 +13,18 @@ import {
   LayoutAnimation,
   Animated,
   Share,
-  Alert,
 } from "react-native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import FontAwesome from "react-native-vector-icons/FontAwesome"
 import moment from "moment"
 import { UIManager } from "react-native"
 import { handleScroll } from "../../components/CustomTabBar"
+import Toast from 'react-native-toast-message'
 
 const { width } = Dimensions.get("window")
 
-const FILTER_TYPES = ["All", "Blood Test", "Radiology"]
+const FILTER_TYPES = ["All", "Blood Test", "Radiology", "Others"]
+const REPORT_FORMATS = ["PDF", "Image"]
 
 const styles = StyleSheet.create({
   container: {
@@ -31,8 +32,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
   },
   header: {
-    padding: 20,
-    paddingTop: 10,
+    paddingTop: 8,
+    paddingBottom: 4,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#E9ECEF",
@@ -52,52 +53,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#212529",
     letterSpacing: -0.5,
   },
   aiButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F8F7FF",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F0F0FF",
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({
       ios: {
-        shadowColor: "#3B39E4",
-        shadowOffset: { width: 0, height: 4 },
+        shadowColor: "#6C63FF",
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
   filterContainer: {
     flexDirection: "row",
-    marginTop: 10,
-    paddingBottom: 10,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+  },
+  filterContent: {
+    paddingRight: 8,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: "#F8F9FA",
-    marginRight: 10,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: "#E9ECEF",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
-        shadowRadius: 3,
+        shadowRadius: 2,
       },
       android: {
         elevation: 1,
@@ -110,8 +116,8 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     color: "#495057",
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "500",
   },
   activeFilterChipText: {
     color: "#fff",
@@ -310,9 +316,150 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-  filterContent: {
+  formatModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formatModalContent: {
+    backgroundColor: '#FFFFFF',
+    width: '80%',
+    padding: 0,
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  formatModalHeader: {
+    padding: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+    alignItems: 'center',
+  },
+  formatModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#212529',
+    textAlign: 'center',
+  },
+  formatModalSubtitle: {
+    fontSize: 13,
+    color: '#6C757D',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  formatOptionsContainer: {
+    padding: 12,
+  },
+  formatOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 8,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  formatOptionSelected: {
+    backgroundColor: '#3B39E410',
+    borderColor: '#3B39E4',
+  },
+  formatIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  formatTextContainer: {
+    flex: 1,
+  },
+  formatOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#212529',
+    marginBottom: 2,
+  },
+  formatOptionDescription: {
+    fontSize: 13,
+    color: '#6C757D',
+  },
+  formatOptionTextSelected: {
+    color: '#3B39E4',
+  },
+  formatModalFooter: {
+    padding: 12,
+    paddingTop: 0,
+  },
+  downloadButton: {
+    backgroundColor: '#3B39E4',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  downloadButtonDisabled: {
+    opacity: 0.5,
+  },
+  downloadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  formatModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  formatModalButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  formatModalButtonCancel: {
+    backgroundColor: '#F8F9FA',
+  },
+  formatModalButtonConfirm: {
+    backgroundColor: '#3B39E4',
+  },
+  formatModalButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  formatModalButtonTextCancel: {
+    color: '#6C757D',
+  },
+  formatModalButtonTextConfirm: {
+    color: '#FFFFFF',
   },
   listContent: {
     padding: 16,
@@ -478,6 +625,8 @@ const LabRecords = React.memo(
     const [filterType, setFilterType] = useState("All")
     const [sortedRecords, setSortedRecords] = useState([])
     const [showAIModal, setShowAIModal] = useState(false)
+    const [showFormatModal, setShowFormatModal] = useState(false)
+    const [selectedFormat, setSelectedFormat] = useState(null)
 
     useEffect(() => {
       const sorted = [...labRecords].sort((a, b) => moment(b.date).valueOf() - moment(a.date).valueOf())
@@ -540,6 +689,50 @@ const LabRecords = React.memo(
           return "#4CAF50"
       }
     }, [])
+
+    const handleDownload = useCallback((record, format) => {
+      // Here you would implement the actual download logic based on the selected format
+      Toast.show({
+        type: 'success',
+        text1: 'Download Started',
+        text2: `${record.title} will be downloaded as ${format}`,
+        position: 'bottom',
+        visibilityTime: 2000,
+      });
+      // Reset format selection
+      setSelectedFormat(null);
+    }, []);
+
+    const handleFormatSelect = useCallback((format) => {
+      setSelectedFormat(format);
+    }, []);
+
+    const handleDownloadConfirm = useCallback(() => {
+      if (selectedRecord && selectedFormat) {
+        // Close format modal first
+        setShowFormatModal(false);
+        
+        // Show toast message after a small delay
+        setTimeout(() => {
+          Toast.show({
+            type: 'success',
+            position: 'bottom',
+            text1: '📥 Download Started',
+            text2: `${selectedRecord.title} - ${selectedFormat} format`,
+            visibilityTime: 2500,
+            autoHide: true,
+            bottomOffset: 60,
+            onShow: () => {
+              // Add any additional download logic here
+              console.log('Download started:', selectedRecord.title, selectedFormat);
+            }
+          });
+        }, 300);
+
+        // Reset format selection
+        setSelectedFormat(null);
+      }
+    }, [selectedRecord, selectedFormat]);
 
     const handleShare = async (record) => {
       try {
@@ -741,10 +934,10 @@ const LabRecords = React.memo(
                   <View style={styles.modalFooter}>
                     <TouchableOpacity
                       style={styles.modalButton}
-                      onPress={() => handleShare(selectedRecord)}
+                      onPress={() => setShowFormatModal(true)}
                     >
-                      <Icon name="share-variant" size={20} color="#fff" />
-                      <Text style={styles.modalButtonText}>Share Report</Text>
+                      <Icon name="download" size={20} color="#fff" />
+                      <Text style={styles.modalButtonText}>Download Report</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -774,6 +967,98 @@ const LabRecords = React.memo(
               >
                 <Text style={styles.aiModalButtonText}>Got it!</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        {/* Format Selection Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showFormatModal}
+          onRequestClose={() => {
+            setShowFormatModal(false);
+            setSelectedFormat(null);
+          }}
+        >
+          <View style={styles.formatModalOverlay}>
+            <View style={styles.formatModalContent}>
+              <View style={styles.formatModalHeader}>
+                <Text style={styles.formatModalTitle}>Download Report</Text>
+                <Text style={styles.formatModalSubtitle}>Choose your preferred format</Text>
+              </View>
+              
+              <View style={styles.formatOptionsContainer}>
+                {REPORT_FORMATS.map((format) => {
+                  const isPDF = format.toLowerCase() === 'pdf';
+                  return (
+                    <TouchableOpacity
+                      key={format}
+                      style={[
+                        styles.formatOption,
+                        selectedFormat === format && styles.formatOptionSelected,
+                      ]}
+                      onPress={() => handleFormatSelect(format)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.formatIconContainer}>
+                        <Icon
+                          name={isPDF ? 'file-pdf-box' : 'image'}
+                          size={24}
+                          color={selectedFormat === format ? '#3B39E4' : '#6C757D'}
+                        />
+                      </View>
+                      <View style={styles.formatTextContainer}>
+                        <Text
+                          style={[
+                            styles.formatOptionText,
+                            selectedFormat === format && styles.formatOptionTextSelected,
+                          ]}
+                        >
+                          {format}
+                        </Text>
+                        <Text style={styles.formatOptionDescription}>
+                          {isPDF 
+                            ? 'Best for printing and sharing'
+                            : 'Perfect for quick viewing'}
+                        </Text>
+                      </View>
+                      {selectedFormat === format && (
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#3B39E4"
+                          style={{ marginLeft: 6 }}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.formatModalFooter}>
+                <TouchableOpacity
+                  style={[
+                    styles.downloadButton,
+                    !selectedFormat && styles.downloadButtonDisabled,
+                  ]}
+                  onPress={() => {
+                    if (selectedFormat) {
+                      handleDownloadConfirm();
+                      // Add haptic feedback if available
+                      if (Platform.OS === 'ios') {
+                        // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }
+                    }
+                  }}
+                  disabled={!selectedFormat}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="download" size={20} color="#FFFFFF" />
+                  <Text style={styles.downloadButtonText}>
+                    {selectedFormat ? `Download as ${selectedFormat}` : 'Select a format'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
