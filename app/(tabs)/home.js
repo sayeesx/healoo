@@ -115,7 +115,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showEmergencyPopup, setShowEmergencyPopup] = useState(false)
   const [searchPlaceholder, setSearchPlaceholder] = useState("")
-  const [userName, setUserName] = useState("User")
+  const [userName, setUserName] = useState("Hello")
   const bellAnim = useRef(new Animated.Value(0)).current
   const sirenAnim = useRef(new Animated.Value(0)).current
   const introBoxWidth = useRef(new Animated.Value(32)).current
@@ -132,10 +132,13 @@ export default function Home() {
       const userDataString = await AsyncStorage.getItem('userData');
       if (userDataString) {
         const userData = JSON.parse(userDataString);
-        setUserName(userData.name || "User");
+        setUserName(userData.name ? `Hello ${userData.name}` : "Hello");
+      } else {
+        setUserName("Hello");
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      setUserName("Hello");
     }
   };
 
@@ -225,39 +228,46 @@ export default function Home() {
 
   useEffect(() => {
     const animateIntroBox = () => {
+      // Calculate width based on text length (approximate width per character)
+      const baseWidth = 32; // Initial width
+      const charWidth = 8; // Approximate width per character
+      const padding = 40; // Extra padding for the box
+      const greetingWidth = userName.length * charWidth + padding;
+      const questionWidth = "How are you feeling today?".length * charWidth + padding;
+  
       Animated.sequence([
-        // Fade in and expand the box
+        // Fade in and expand the box to fit greeting
         Animated.parallel([
           Animated.timing(introBoxOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-          Animated.timing(introBoxWidth, { toValue: 200, duration: 500, useNativeDriver: false }),
+          Animated.timing(introBoxWidth, { toValue: greetingWidth, duration: 500, useNativeDriver: false }),
         ]),
-        // Show "Hello Raees"
+        // Show greeting text
         Animated.timing(introTextOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
         // Wait for 2 seconds
         Animated.delay(2000),
         // Hide text
         Animated.timing(introTextOpacity, { toValue: 0, duration: 300, useNativeDriver: false }),
-        // Expand box further
-        Animated.timing(introBoxWidth, { toValue: 250, duration: 300, useNativeDriver: false }),
-        // Show "How are you feeling today?"
+        // Expand box to fit question
+        Animated.timing(introBoxWidth, { toValue: questionWidth, duration: 300, useNativeDriver: false }),
+        // Show question text
         Animated.timing(introTextOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
         // Wait for 3 seconds
         Animated.delay(3000),
         // Shrink back slowly with fade out effect
         Animated.parallel([
-          Animated.timing(introBoxWidth, { toValue: 32, duration: 1000, useNativeDriver: false }),
+          Animated.timing(introBoxWidth, { toValue: baseWidth, duration: 1000, useNativeDriver: false }),
           Animated.timing(introBoxOpacity, { toValue: 0, duration: 1000, useNativeDriver: false }),
           Animated.timing(introTextOpacity, { toValue: 0, duration: 500, useNativeDriver: false }),
         ]),
       ]).start()
     }
-
+  
     animateIntroBox()
-
+  
     // Change text after delay
-    setTimeout(() => setIntroText("Hello Raees"), 800)
+    setTimeout(() => setIntroText(userName), 800)
     setTimeout(() => setIntroText("How are you feeling today?"), 3400)
-  }, [introBoxWidth, introBoxOpacity, introTextOpacity])
+  }, [introBoxWidth, introBoxOpacity, introTextOpacity, userName])
 
   const handleNotification = () => {
     console.log("Notification clicked")
@@ -574,7 +584,7 @@ const styles = StyleSheet.create({
   },
   introBox: {
     height: 32,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#fff",
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "flex-start",
@@ -584,16 +594,16 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 1.84,
+    elevation: 3,
   },
   introText: {
     color: "#333",
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: "semi-bold",
   },
   title: {
     fontSize: 28,
