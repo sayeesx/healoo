@@ -11,11 +11,15 @@ import {
   Platform,
   FlatList,
   LayoutAnimation,
+  Animated,
+  Share,
+  Alert,
 } from "react-native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import FontAwesome from "react-native-vector-icons/FontAwesome"
 import moment from "moment"
 import { UIManager } from "react-native"
+import { handleScroll } from "../../components/CustomTabBar"
 
 const { width } = Dimensions.get("window")
 
@@ -65,7 +69,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...Platform.select({
       ios: {
-        shadowColor: "#6B4EFF",
+        shadowColor: "#3B39E4",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -101,8 +105,8 @@ const styles = StyleSheet.create({
     }),
   },
   activeFilterChip: {
-    backgroundColor: "#6B4EFF",
-    borderColor: "#6B4EFF",
+    backgroundColor: "#3B39E4",
+    borderColor: "#3B39E4",
   },
   filterChipText: {
     color: "#495057",
@@ -133,36 +137,43 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardHeader: {
+  recordHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerInfo: {
+  recordInfo: {
     flex: 1,
-    marginLeft: 12,
   },
-  recordTitle: {
+  recordActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  recordType: {
     fontSize: 20,
     fontWeight: "600",
     color: "#212529",
     marginBottom: 4,
   },
-  date: {
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  recordDate: {
     fontSize: 14,
     color: "#6C757D",
   },
-  downloadButton: {
+  daysAgo: {
+    fontSize: 14,
+    color: '#6C757D',
+  },
+  shareButton: {
     padding: 8,
+    borderRadius: 20,
     backgroundColor: "#F8F7FF",
-    borderRadius: 12,
   },
   cardContent: {
     borderTopWidth: 1,
@@ -208,32 +219,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   viewButton: {
-    backgroundColor: "#F8F7FF",
+    backgroundColor: "#3B39E4",
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: "center",
     marginTop: 16,
   },
   viewButtonText: {
-    color: "#6B4EFF",
-    fontSize: 15,
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "600",
-  },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#6B4EFF",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   modalOverlay: {
     flex: 1,
@@ -302,7 +297,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   modalButton: {
-    backgroundColor: "#6B4EFF",
+    backgroundColor: "#3B39E4",
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -322,6 +317,66 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
+  aiModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiModalContent: {
+    backgroundColor: '#FFFFFF',
+    width: '85%',
+    padding: 24,
+    borderRadius: 20,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#3B39E4',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  aiModalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(59, 57, 228, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  aiModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#3B39E4',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  aiModalMessage: {
+    fontSize: 16,
+    color: '#495057',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  aiModalButton: {
+    backgroundColor: '#3B39E4',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+  },
+  aiModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 })
 
 const labRecords = [
@@ -336,6 +391,7 @@ const labRecords = [
     severity: "Normal",
     type: "Blood Test",
     description: "Routine blood test to check overall health status",
+    viewed: false,
   },
   {
     id: 2,
@@ -348,6 +404,7 @@ const labRecords = [
     severity: "Serious",
     type: "Radiology",
     description: "Chest examination for respiratory concerns",
+    viewed: false,
   },
   {
     id: 3,
@@ -360,6 +417,7 @@ const labRecords = [
     severity: "Urgent",
     type: "Radiology",
     description: "Detailed brain scan for neurological assessment",
+    viewed: false,
   },
   {
     id: 4,
@@ -372,6 +430,7 @@ const labRecords = [
     severity: "Attention",
     type: "Blood Test",
     description: "Cholesterol and triglycerides assessment",
+    viewed: false,
   },
   {
     id: 5,
@@ -384,6 +443,7 @@ const labRecords = [
     severity: "Normal",
     type: "Blood Test",
     description: "Comprehensive thyroid hormone analysis",
+    viewed: false,
   },
   {
     id: 6,
@@ -396,6 +456,7 @@ const labRecords = [
     severity: "Attention",
     type: "Radiology",
     description: "Osteoporosis screening and bone health assessment",
+    viewed: false,
   },
 ]
 
@@ -403,12 +464,20 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
 
+const getDaysAgo = (date) => {
+  const days = moment().diff(moment(date), 'days');
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
+};
+
 const LabRecords = React.memo(
   function LabRecords() {
     const [selectedRecord, setSelectedRecord] = useState(null)
     const [modalVisible, setModalVisible] = useState(false)
     const [filterType, setFilterType] = useState("All")
     const [sortedRecords, setSortedRecords] = useState([])
+    const [showAIModal, setShowAIModal] = useState(false)
 
     useEffect(() => {
       const sorted = [...labRecords].sort((a, b) => moment(b.date).valueOf() - moment(a.date).valueOf())
@@ -448,11 +517,15 @@ const LabRecords = React.memo(
       [filterType, handleFilterChange],
     )
 
-    const getDaysAgo = useCallback((date) => {
-      const days = moment().diff(moment(date), "days")
-      if (days === 0) return "Today"
-      if (days === 1) return "Yesterday"
-      return `${days} days ago`
+    const getStatusColor = useCallback((status) => {
+      switch (status.toLowerCase()) {
+        case "completed":
+          return "#4CAF50"
+        case "processing":
+          return "#2196F3"
+        default:
+          return "#FF9800"
+      }
     }, [])
 
     const getSeverityColor = useCallback((severity) => {
@@ -468,16 +541,24 @@ const LabRecords = React.memo(
       }
     }, [])
 
-    const getStatusColor = useCallback((status) => {
-      switch (status.toLowerCase()) {
-        case "completed":
-          return "#4CAF50"
-        case "processing":
-          return "#2196F3"
-        default:
-          return "#FF9800"
+    const handleShare = async (record) => {
+      try {
+        const result = await Share.share({
+          message: `Lab Report from ${record.lab}\nType: ${record.type}\nDate: ${record.date}\nDoctor: ${record.doctor}\n\nDescription: ${record.description}`,
+          title: `Lab Report - ${record.type}`,
+        });
+
+        if (result.action === Share.sharedAction) {
+          // Update the record as viewed after sharing
+          const updatedRecords = sortedRecords.map((r) =>
+            r.id === record.id ? { ...r, viewed: true } : r
+          );
+          setSortedRecords(updatedRecords);
+        }
+      } catch (error) {
+        console.error(error);
       }
-    }, [])
+    };
 
     const renderItem = useCallback(
       ({ item: record }) => {
@@ -486,96 +567,110 @@ const LabRecords = React.memo(
             onPress={() => {
               setSelectedRecord(record)
               setModalVisible(true)
+              // Mark as viewed when opened
+              const updatedRecords = sortedRecords.map((r) =>
+                r.id === record.id ? { ...r, viewed: true } : r
+              )
+              setSortedRecords(updatedRecords)
             }}
-            activeOpacity={0.7}
+            style={styles.recordCard}
           >
-            <View style={styles.recordCard}>
-              <View style={styles.cardHeader}>
+            <View style={styles.recordHeader}>
+              <View style={styles.recordInfo}>
+                <Text style={styles.recordType}>{record.title}</Text>
+                <View style={styles.dateContainer}>
+                  <Text style={styles.recordDate}>
+                    {moment(record.date).format("MMM DD, YYYY")}
+                  </Text>
+                  <Text style={styles.daysAgo}>• {getDaysAgo(record.date)}</Text>
+                </View>
+              </View>
+              <View style={styles.recordActions}>
+                <TouchableOpacity
+                  onPress={() => handleShare(record)}
+                  style={styles.shareButton}
+                >
+                  <Icon name="share-variant" size={24} color="#3B39E4" />
+                </TouchableOpacity>
+                {record.viewed ? (
+                  <Icon name="eye-check" size={24} color="#28A745" />
+                ) : (
+                  <Icon name="eye-outline" size={24} color="#6C757D" />
+                )}
+              </View>
+            </View>
+
+            <View style={styles.cardContent}>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Doctor</Text>
+                <Text style={styles.value}>{record.doctor}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Lab</Text>
+                <Text style={styles.value}>{record.lab}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Location</Text>
+                <Text style={styles.value}>{record.location}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Status</Text>
+                <View style={styles.statusContainer}>
+                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(record.status) }]} />
+                  <Text style={[styles.statusText, { color: getStatusColor(record.status) }]}>{record.status}</Text>
+                </View>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.label}>Severity</Text>
                 <View
                   style={[
-                    styles.iconContainer,
-                    { backgroundColor: record.type === "Radiology" ? "#FFF3E0" : "#E8F5E9" },
+                    styles.severityContainer,
+                    { backgroundColor: `${getSeverityColor(record.severity)}20` },
                   ]}
                 >
-                  <FontAwesome
-                    name={record.type === "Radiology" ? "x-ray" : "file-text-o"}
-                    size={24}
-                    color={record.type === "Radiology" ? "#FF9800" : "#4CAF50"}
-                  />
-                </View>
-                <View style={styles.headerInfo}>
-                  <Text style={styles.recordTitle}>{record.title}</Text>
-                  <Text style={styles.date}>
-                    {moment(record.date).format("MMM DD, YYYY")} • {getDaysAgo(record.date)}
+                  <Text style={[styles.severityText, { color: getSeverityColor(record.severity) }]}>
+                    {record.severity}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.downloadButton}
-                  onPress={() => {
-                    /* Handle download */
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Icon name="download" size={24} color="#6B4EFF" />
-                </TouchableOpacity>
               </View>
-
-              <View style={styles.cardContent}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Doctor</Text>
-                  <Text style={styles.value}>{record.doctor}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Lab</Text>
-                  <Text style={styles.value}>{record.lab}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Location</Text>
-                  <Text style={styles.value}>{record.location}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Status</Text>
-                  <View style={styles.statusContainer}>
-                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(record.status) }]} />
-                    <Text style={[styles.statusText, { color: getStatusColor(record.status) }]}>{record.status}</Text>
-                  </View>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Severity</Text>
-                  <View
-                    style={[styles.severityContainer, { backgroundColor: `${getSeverityColor(record.severity)}20` }]}
-                  >
-                    <Text style={[styles.severityText, { color: getSeverityColor(record.severity) }]}>
-                      {record.severity}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => {
-                  setSelectedRecord(record)
-                  setModalVisible(true)
-                }}
-              >
-                <Text style={styles.viewButtonText}>View Details</Text>
-              </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={() => {
+                setSelectedRecord(record)
+                setModalVisible(true)
+                // Mark as viewed when opened
+                const updatedRecords = sortedRecords.map((r) =>
+                  r.id === record.id ? { ...r, viewed: true } : r
+                )
+                setSortedRecords(updatedRecords)
+              }}
+            >
+              <Text style={styles.viewButtonText}>View Details</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         )
       },
-      [getDaysAgo, getSeverityColor, getStatusColor],
+      [sortedRecords],
     )
 
     const keyExtractor = useCallback((item) => item.id.toString(), [])
+
+    const handleAIButtonPress = () => {
+      setShowAIModal(true);
+    };
 
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.headerTitle}>Lab Records</Text>
-            <TouchableOpacity style={styles.aiButton} activeOpacity={0.8}>
-              <Icon name="robot" size={24} color="#6B4EFF" />
+            <TouchableOpacity 
+              style={styles.aiButton} 
+              activeOpacity={0.8}
+              onPress={handleAIButtonPress}
+            >
+              <Icon name="robot" size={24} color="#3B39E4" />
             </TouchableOpacity>
           </View>
 
@@ -591,16 +686,17 @@ const LabRecords = React.memo(
         </View>
 
         <View style={{ flex: 1 }}>
-          <FlatList
+          <Animated.FlatList
             data={filteredRecords}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
             removeClippedSubviews={true}
             maxToRenderPerBatch={10}
             windowSize={5}
-            initialNumToRender={8}
           />
         </View>
 
@@ -645,12 +741,10 @@ const LabRecords = React.memo(
                   <View style={styles.modalFooter}>
                     <TouchableOpacity
                       style={styles.modalButton}
-                      onPress={() => {
-                        /* Handle download */
-                      }}
+                      onPress={() => handleShare(selectedRecord)}
                     >
-                      <Icon name="download" size={20} color="#fff" />
-                      <Text style={styles.modalButtonText}>Download Report</Text>
+                      <Icon name="share-variant" size={20} color="#fff" />
+                      <Text style={styles.modalButtonText}>Share Report</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -658,18 +752,37 @@ const LabRecords = React.memo(
             </View>
           </View>
         </Modal>
-
-        <TouchableOpacity style={styles.fab} activeOpacity={0.8}>
-          <Icon name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
+        {/* AI Coming Soon Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={showAIModal}
+          onRequestClose={() => setShowAIModal(false)}
+        >
+          <View style={styles.aiModalOverlay}>
+            <View style={styles.aiModalContent}>
+              <View style={styles.aiModalIconContainer}>
+                <Icon name="robot" size={40} color="#3B39E4" />
+              </View>
+              <Text style={styles.aiModalTitle}>AI Assistant Coming Soon!</Text>
+              <Text style={styles.aiModalMessage}>
+                We're working on something exciting! Our AI assistant is being developed to make your healthcare experience even better.
+              </Text>
+              <TouchableOpacity
+                style={styles.aiModalButton}
+                onPress={() => setShowAIModal(false)}
+              >
+                <Text style={styles.aiModalButtonText}>Got it!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     )
   },
   (prevProps, nextProps) => {
-    // Implement a custom comparison if needed
     return true
   },
 )
 
 export default LabRecords
-
