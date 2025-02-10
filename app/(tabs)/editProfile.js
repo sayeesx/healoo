@@ -6,28 +6,29 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  TextInput,
   Platform,
   StatusBar,
-  Alert
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { handleScroll } from '../../components/CustomTabBar';
+import { Picker } from '@react-native-picker/picker';
+import { TextInput } from 'react-native-paper';
 
 export default function EditProfile() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [userData, setUserData] = useState({
     name: '',
     email: '',
     phone: '',
     age: '',
-    gender: '',
-    height: '',
-    weight: '',
+    address: '',
     bloodType: '',
+    gender: '',
   });
+
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     loadUserData();
@@ -37,45 +38,46 @@ export default function EditProfile() {
     try {
       const userDataString = await AsyncStorage.getItem('userData');
       if (userDataString) {
-        const data = JSON.parse(userDataString);
-        setFormData(prev => ({
-          ...prev,
-          ...data
-        }));
+        setUserData(JSON.parse(userDataString));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      Alert.alert('Error', 'Failed to load user data');
     }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!userData.name) newErrors.name = 'Name is required';
+    if (!userData.email) newErrors.email = 'Email is required';
+    if (!userData.phone) newErrors.phone = 'Phone is required';
+    if (!userData.age) newErrors.age = 'Age is required';
+    if (!userData.address) newErrors.address = 'Address is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
+    if (!validateForm()) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
     try {
-      await AsyncStorage.setItem('userData', JSON.stringify(formData));
-      Alert.alert('Success', 'Profile updated successfully');
-      // Stay on the same page after saving
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
     } catch (error) {
       console.error('Error saving user data:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert('Error', 'Failed to save changes');
     }
   };
 
-  const renderInput = (label, key, keyboardType = 'default', placeholder = '') => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={styles.input}
-        value={formData[key]}
-        onChangeText={(text) => setFormData(prev => ({ ...prev, [key]: text }))}
-        keyboardType={keyboardType}
-        placeholder={placeholder}
-        placeholderTextColor="#999"
-      />
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -84,33 +86,99 @@ export default function EditProfile() {
           <Icon name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
-        <View style={styles.backButton} />
-      </View>
-
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        <View style={styles.form}>
-          {renderInput('Full Name', 'name', 'default', 'Enter your full name')}
-          {renderInput('Email', 'email', 'email-address', 'Enter your email')}
-          {renderInput('Phone Number', 'phone', 'phone-pad', 'Enter your phone number')}
-          {renderInput('Age', 'age', 'numeric', 'Enter your age')}
-          {renderInput('Gender', 'gender', 'default', 'Enter your gender')}
-          {renderInput('Height (cm)', 'height', 'numeric', 'Enter your height')}
-          {renderInput('Weight (kg)', 'weight', 'numeric', 'Enter your weight')}
-          {renderInput('Blood Type', 'bloodType', 'default', 'Enter your blood type')}
-        </View>
-
         <TouchableOpacity 
           style={styles.saveButton}
           onPress={handleSave}
         >
-          <Text style={styles.saveButtonText}>Save Changes</Text>
+          <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content}>
+        <TextInput
+          label="Full Name"
+          value={userData.name}
+          onChangeText={(text) => setUserData({ ...userData, name: text })}
+          mode="outlined"
+          error={!!errors.name}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Email"
+          value={userData.email}
+          onChangeText={(text) => setUserData({ ...userData, email: text })}
+          mode="outlined"
+          error={!!errors.email}
+          keyboardType="email-address"
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Phone"
+          value={userData.phone}
+          onChangeText={(text) => setUserData({ ...userData, phone: text })}
+          mode="outlined"
+          error={!!errors.phone}
+          keyboardType="phone-pad"
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Age"
+          value={userData.age}
+          onChangeText={(text) => setUserData({ ...userData, age: text })}
+          mode="outlined"
+          error={!!errors.age}
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <View style={styles.pickerContainer}>
+          <Text style={styles.pickerLabel}>Blood Type</Text>
+          <Picker
+            selectedValue={userData.bloodType}
+            onValueChange={(value) => setUserData({ ...userData, bloodType: value })}
+            style={[styles.picker, { backgroundColor: '#F5F5F5' }]}
+            itemStyle={{ fontSize: 16 }}
+          >
+            <Picker.Item label="Select Blood Type" value="" />
+            <Picker.Item label="A+" value="A+" />
+            <Picker.Item label="A-" value="A-" />
+            <Picker.Item label="B+" value="B+" />
+            <Picker.Item label="B-" value="B-" />
+            <Picker.Item label="AB+" value="AB+" />
+            <Picker.Item label="AB-" value="AB-" />
+            <Picker.Item label="O+" value="O+" />
+            <Picker.Item label="O-" value="O-" />
+          </Picker>
+        </View>
+
+        <View style={styles.pickerContainer}>
+          <Text style={styles.pickerLabel}>Gender</Text>
+          <Picker
+            selectedValue={userData.gender}
+            onValueChange={(value) => setUserData({ ...userData, gender: value })}
+            style={[styles.picker, { backgroundColor: '#F5F5F5' }]}
+            itemStyle={{ fontSize: 16 }}
+          >
+            <Picker.Item label="Select Gender" value="" />
+            <Picker.Item label="Male" value="Male" />
+            <Picker.Item label="Female" value="Female" />
+            <Picker.Item label="Other" value="Other" />
+          </Picker>
+        </View>
+
+        <TextInput
+          label="Address"
+          value={userData.address}
+          onChangeText={(text) => setUserData({ ...userData, address: text })}
+          mode="outlined"
+          error={!!errors.address}
+          multiline
+          numberOfLines={3}
+          style={styles.input}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -118,7 +186,7 @@ export default function EditProfile() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 2,
     backgroundColor: '#FFFFFF',
   },
   header: {
@@ -126,6 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 8,
+    paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
@@ -138,55 +207,40 @@ const styles = StyleSheet.create({
       }
     })
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 24,
-  },
-  form: {
-    padding: 16,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#000000',
+  backButton: {
+    padding: 8,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+    padding: 8,
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: '#007AFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  input: {
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  pickerContainer: {
+    marginBottom: 16,
+  },
+  pickerLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  picker: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
   },
 });
