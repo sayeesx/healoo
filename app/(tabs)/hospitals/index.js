@@ -1,14 +1,33 @@
-import { useState, useRef, useEffect } from "react"
-import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, Dimensions, Animated } from "react-native"
+"use client"
+
+import { useState } from "react"
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  Dimensions,
+  Animated,
+  ScrollView,
+} from "react-native"
 import { useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { BlurView } from "expo-blur"
 import Carousel from "react-native-reanimated-carousel"
 import { LinearGradient } from "expo-linear-gradient"
-import { typography } from "../constants/fonts"
+import { BlurView } from "expo-blur"
+import { typography } from "../../constants/fonts"
 
 const { width } = Dimensions.get("window")
 const cardWidth = width - 40
+
+const hospitalLogos = {
+  "1": require("../../../assets/hospital-logos/avs.png"),
+  "2": require("../../../assets/hospital-logos/almas.png"),
+  "3": require("../../../assets/hospital-logos/aster.png"),
+  "4": require("../../../assets/hospital-logos/hms.png"),
+}
 
 const hospitals = [
   {
@@ -16,84 +35,56 @@ const hospitals = [
     name: "KIMS Hospital",
     location: "Kottakkal Main Road",
     images: [
-      "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=2940&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2953&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=2946&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1538108149393-fbbd81895907?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2353&q=80",
+      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2373&q=80",
     ],
     timing: "9:00 AM - 9:00 PM",
     activeDoctors: 12,
+    type: "multi",
   },
   {
     id: "2",
-    name: "Moulana Hospital",
+    name: "Almas Hospital",
     location: "Near Bus Stand",
     images: [
-      "https://images.unsplash.com/photo-1632833239869-a37e3a5806d2?q=80&w=2940&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2953&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=2946&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1516549655669-df668f3652ee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
+      "https://images.unsplash.com/photo-1519494080410-f9aa76cb4283?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2353&q=80",
+      "https://images.unsplash.com/photo-1527613426441-4da17471b66d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2352&q=80",
     ],
     timing: "24/7",
     activeDoctors: 15,
+    type: "unani",
   },
   {
     id: "3",
-    name: "City Hospital",
+    name: "Hms Hospital",
     location: "MG Road",
     images: [
-      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2953&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=2940&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1632833239869-a37e3a5806d2?q=80&w=2940&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2373&q=80",
+      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2353&q=80",
+      "https://images.unsplash.com/photo-1538108149393-fbbd81895907?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
     ],
     timing: "8:00 AM - 10:00 PM",
     activeDoctors: 8,
+    type: "clinic",
   },
   {
     id: "4",
     name: "Al Shifa Hospital",
     location: "College Road",
     images: [
-      "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=2946&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=2940&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1632833239869-a37e3a5806d2?q=80&w=2940&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1519494080410-f9aa76cb4283?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2353&q=80",
+      "https://images.unsplash.com/photo-1527613426441-4da17471b66d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2352&q=80",
+      "https://images.unsplash.com/photo-1516549655669-df668f3652ee?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2340&q=80",
     ],
     timing: "24/7",
     activeDoctors: 20,
+    type: "vet",
   },
 ]
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView)
-
-const RollingText = ({ text, delay }) => {
-  const animatedValue = useRef(new Animated.Value(-50)).current
-
-  useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: 0,
-      duration: 1000,
-      delay,
-      useNativeDriver: true,
-    }).start()
-  }, [animatedValue]) // Added animatedValue to dependencies
-
-  return (
-    <View style={{ height: 40, overflow: "hidden" }}>
-      <Animated.Text
-        style={[
-          styles.rollingText,
-          {
-            transform: [
-              {
-                translateY: animatedValue,
-              },
-            ],
-          },
-        ]}
-      >
-        {text}
-      </Animated.Text>
-    </View>
-  )
-}
 
 const HospitalCard = ({ hospital, onPress }) => {
   const [animation] = useState(new Animated.Value(1))
@@ -115,15 +106,19 @@ const HospitalCard = ({ hospital, onPress }) => {
   return (
     <Animated.View style={[styles.card, { transform: [{ scale: animation }] }]}>
       <TouchableOpacity onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={1}>
-        <Carousel
-          loop
-          width={cardWidth}
-          height={180}
-          autoPlay={true}
-          data={hospital.images}
-          scrollAnimationDuration={1000}
-          renderItem={({ item }) => <Image source={{ uri: item }} style={styles.image} />}
-        />
+        <View style={styles.imageContainer}>
+          <Carousel
+            loop
+            width={cardWidth}
+            height={200}
+            autoPlay={true}
+            data={hospital.images}
+            scrollAnimationDuration={1000}
+            renderItem={({ item }) => <Image source={{ uri: item }} style={styles.image} />}
+          />
+          {hospitalLogos[hospital.id] && <Image source={hospitalLogos[hospital.id]} style={styles.logo} />}
+        </View>
+
         <LinearGradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)"]} style={styles.gradient} />
         <View style={styles.infoContainer}>
           <Text style={styles.hospitalName}>{hospital.name}</Text>
@@ -147,68 +142,52 @@ const HospitalCard = ({ hospital, onPress }) => {
 
 export default function Hospitals() {
   const router = useRouter()
-  const scrollY = useRef(new Animated.Value(0)).current
-  const headerHeight = useRef(new Animated.Value(120)).current
+  const [activeFilter, setActiveFilter] = useState("all")
 
   const handleHospitalPress = (hospitalId) => {
     router.push(`/hospitals/${hospitalId}`)
   }
 
-  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })
+  const filteredHospitals =
+    activeFilter === "all" ? hospitals : hospitals.filter((hospital) => hospital.type === activeFilter)
 
-  useEffect(() => {
-    scrollY.addListener(({ value }) => {
-      if (value > 50) {
-        Animated.timing(headerHeight, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }).start()
-      } else {
-        Animated.timing(headerHeight, {
-          toValue: 120,
-          duration: 300,
-          useNativeDriver: false,
-        }).start()
-      }
-    })
+  const handleFilterPress = (type) => {
+    setActiveFilter(type)
+  }
 
-    return () => {
-      scrollY.removeAllListeners()
-    }
-  }, [])
+  const filters = ["all", "multi", "unani", "clinic", "vet"]
 
   return (
     <View style={styles.container}>
-      <AnimatedBlurView
-        intensity={80}
-        tint="light"
-        style={[
-          styles.headerContainer,
-          {
-            height: headerHeight,
-            overflow: "hidden",
-          },
-        ]}
-      >
+      <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.titleContainer}>
-          <RollingText text="Discover" delay={0} />
-          <RollingText text="Nearby" delay={200} />
-          <RollingText text="Hospitals" delay={400} />
+          <Text style={styles.headerTitle}>Nearby Hospitals</Text>
         </View>
-      </AnimatedBlurView>
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.toggleContainer}>
+        {filters.map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[styles.toggleButton, activeFilter === type && styles.toggleButtonActive]}
+            onPress={() => handleFilterPress(type)}
+          >
+            <Text style={[styles.toggleText, activeFilter === type && styles.toggleTextActive]}>
+              {type.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <FlatList
-        data={hospitals}
+        data={filteredHospitals}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <HospitalCard hospital={item} onPress={() => handleHospitalPress(item.id)} />}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
       />
     </View>
   )
@@ -217,19 +196,26 @@ export default function Hospitals() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F2F1EF",
+    backgroundColor: "#FFFFFF",
   },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.1)",
+    backgroundColor: "#FFFFFF",
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 1000,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   backButton: {
     padding: 8,
@@ -238,14 +224,14 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
   },
-  rollingText: {
+  headerTitle: {
     ...typography.h3,
     color: "#333",
-    fontWeight: "800",
-    fontSize: 32,
+    fontWeight: "700",
+    fontSize: 24,
   },
   listContainer: {
-    paddingTop: 140,
+    paddingTop: 180,
     padding: 20,
   },
   card: {
@@ -263,17 +249,29 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  imageContainer: {
+    position: "relative",
+  },
   image: {
     width: "100%",
-    height: 180,
+    height: 200,
     resizeMode: "cover",
+  },
+  logo: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    zIndex: 2,
   },
   gradient: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 180,
+    height: 200,
   },
   infoContainer: {
     position: "absolute",
@@ -295,6 +293,29 @@ const styles = StyleSheet.create({
   infoText: {
     ...typography.body2,
     marginLeft: 8,
+    color: "#fff",
+  },
+  toggleContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginTop: 80,
+    marginBottom: 10,
+  },
+  toggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "#F0F0F0",
+    marginRight: 10,
+  },
+  toggleButtonActive: {
+    backgroundColor: "#1E3A8A",
+  },
+  toggleText: {
+    color: "#333",
+    fontWeight: "600",
+  },
+  toggleTextActive: {
     color: "#fff",
   },
 })
