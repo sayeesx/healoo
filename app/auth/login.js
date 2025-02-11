@@ -20,6 +20,19 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import Checkbox from 'expo-checkbox';
+import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
+
+// Initialize Supabase client
+const supabaseUrl = Constants?.expoConfig?.extra?.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = Constants?.expoConfig?.extra?.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+// Ensure we have the required configuration
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase configuration. Please check your environment variables.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const FloatingLabelInput = forwardRef(({ label, value, onChangeText, secureTextEntry, style, keyboardType, ...props }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -236,9 +249,23 @@ export default function Login() {
     try {
       setLoading(true);
       
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
+      // Use Supabase's sign-in method with correct parameter handling
+      const signInCredentials = isPhoneLogin 
+        ? { phone: formData.phone, password: formData.password }
+        : { email: formData.email, password: formData.password };
+
+      const { data, error } = await supabase.auth.signInWithPassword(signInCredentials);
+
+      if (error) {
+        console.error('Supabase Sign In Error:', error);
+        setLoading(false);
+        showToast('error', error.message || 'Invalid login credentials');
+        return;
+      }
+
+      // Log user details for debugging
+      console.log('Signed In User:', data.user);
+
       showToast('success', 'Sign in successful');
       
       // Wait for toast to be visible before navigation
@@ -248,12 +275,13 @@ export default function Login() {
       }, 500);
       
     } catch (error) {
+      console.error('Sign In Catch Error:', error);
       setLoading(false);
-      showToast('error', 'Sign in failed');
+      showToast('error', 'Sign in failed: ' + error.message);
     }
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!formData.name) {
       showToast('error', 'Please enter your name');
       return;
@@ -279,8 +307,37 @@ export default function Login() {
       return;
     }
 
-    setShowSignUpSuccess(true);
-    showToast('success', 'Sign up successful! Please sign in.');
+    try {
+      setLoading(true);
+      
+      // Use Supabase to sign up with correct parameter handling
+      const signUpCredentials = isPhoneLogin 
+        ? { phone: formData.phone, password: formData.password }
+        : { email: formData.email, password: formData.password };
+
+      const { data, error } = await supabase.auth.signUp(signUpCredentials);
+
+      if (error) {
+        console.error('Supabase Sign Up Error:', error);
+        showToast('error', error.message || 'Sign up failed');
+        return;
+      }
+
+      // Log sign-up details for debugging
+      console.log('Signed Up User:', data.user);
+
+      // Reset form and switch to sign-in
+      setLoading(false);
+      setIsSignUp(false);
+      setIsSignIn(true);
+      
+      showToast('success', 'Sign up successful! Please sign in.');
+      
+    } catch (error) {
+      console.error('Sign Up Catch Error:', error);
+      setLoading(false);
+      showToast('error', 'Sign up failed: ' + error.message);
+    }
   };
 
   const handleForgotPassword = () => {
@@ -456,6 +513,8 @@ export default function Login() {
 
   const renderSignUpForm = () => (
     <>
+      {renderToggleButtons()}
+
       <FloatingLabelInput
         label="Full Name"
         value={formData.name}
@@ -978,4 +1037,5 @@ const styles = StyleSheet.create({
     color: '#0066FF',
     fontWeight: '600',
   },
+  
 });

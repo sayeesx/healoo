@@ -96,21 +96,26 @@ export default function Profile() {
   ];
 
   const handleUploadImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Needed', 'Camera roll permissions required!');
-      return;
-    }
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Camera roll permissions required!');
+        return;
+      }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
 
-    if (!result.canceled) {
-      setProfileImage({ uri: result.assets[0].uri });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setProfileImage({ uri: result.assets[0].uri });
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
