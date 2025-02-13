@@ -81,7 +81,7 @@ export default function Header() {
         </View>
       </View>
 
-      <Text style={styles.title}>Find your desired specialist</Text>
+      <Text style={styles.title}>Find your deeesired specialist</Text>
 
       <View style={styles.searchContainer}>
         <TextInput

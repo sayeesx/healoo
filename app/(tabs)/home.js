@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from "react"
+"use client"
+
+import { useState, useRef, useEffect, useCallback, memo } from "react"
 import {
   StyleSheet,
   View,
@@ -14,122 +16,101 @@ import {
   Linking,
 } from "react-native"
 import { useRouter } from "expo-router"
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import { typography } from "../constants/fonts"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { BlurView } from "expo-blur"
-import { handleScroll } from "../../components/CustomTabBar"
+import { useFonts, Inter_700Bold, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { useShakeAnimation } from '../../hooks/useShakeAnimation';
+import { useSirenAnimation } from '../../hooks/useSirenAnimation';
+import { useSearchPlaceholder } from '../../hooks/useSearchPlaceholder';
+import { useIntroAnimation } from '../../hooks/useIntroAnimation';
+import { specialties, popularDoctors, hospitals, hospitalLogos } from '../data/constants';
+import { supabase } from '../../lib/supabase';
+import { SkeletonImage } from '../../hooks/SkeletonImage';
+import Header from '../../components/header';
 
 const { width } = Dimensions.get("window")
 
-const specialties = [
-  {
-    id: 1,
-    name: "Cardiology     ",
-    icon: "heart-pulse",
-    doctorsAvailable: 17,
-  },
-  {
-    id: 2,
-    name: "Neurology     ",
-    icon: "brain",
-    doctorsAvailable: 22,
-  },
-  {
-    id: 3,
-    name: "Dentist        ",
-    icon: "tooth-outline",
-    doctorsAvailable: 15,
-  },
-  {
-    id: 4,
-    name: "General       ",
-    icon: "stethoscope",
-    doctorsAvailable: 19,
-  },
-]
+const safeStyleCreate = (baseStyle = {}, additionalStyle = {}) => {
+  try {
+    return { ...baseStyle, ...additionalStyle }
+  } catch (error) {
+    console.error("Error creating style:", error)
+    return baseStyle
+  }
+}
 
-const popularDoctors = [
-  {
-    id: "1",
-    name: "Dr. Tahsin Neduvanchery",
-    specialty: "Cardiology",
-    specialtyIcon: "heart-pulse",
-    experience: 5,
-    fieldOfStudy: "MBBS, MD, DM, MRCP, FRCP, FACC",
-    image: require("../../assets/doctors/tahsin.png"),
-  },
-  {
-    id: "2",
-    name: "Dr. Faizal M Iqbal",
-    specialty: " Orthopaedic Surgeon",
-    specialtyIcon: "bone",
-    experience: 8,
-    fieldOfStudy: "MBBS, MS, FRIEBERG",
-    image: require("../../assets/doctors/faizal.png"),
-  },
-  {
-    id: "3",
-    name: "Dr. Chandrasekhar J",
-    specialty: "Neurology",
-    specialtyIcon: "brain",
-    experience: 6,
-    fieldOfStudy: "MBBS, DCH",
-    image: require("../../assets/doctors/chandru.png"),
-  },
-]
-
-const hospitals = [
-  {
-    id: "1",
-    name: "KIMS Hospital",
-    location: "Kottakkal Main Road",
-    image: "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=2940&auto=format&fit=crop",
-    timing: "9:00 AM - 9:00 PM",
-    activeDoctors: 12,
-    color: "#4DABF7",
-  },
-  {
-    id: "2",
-    name: "Moulana Hospital",
-    location: "Near Bus Stand, Kottakkal",
-    image: "https://images.unsplash.com/photo-1632833239869-a37e3a5806d2?q=80&w=2940&auto=format&fit=crop",
-    timing: "24/7",
-    activeDoctors: 15,
-    color: "#FF6B6B",
-  },
-  {
-    id: "3",
-    name: "City Hospital",
-    location: "MG Road, Kottakkal",
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2953&auto=format&fit=crop",
-    timing: "8:00 AM - 10:00 PM",
-    activeDoctors: 8,
-    color: "#69DB7C",
-  },
-]
+const getSupabaseImageUrl = (path) => {
+  if (!path) return null;
+  return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/hospitals/${path}`;
+};
 
 export default function Home() {
   const router = useRouter()
+  const [fontsLoaded] = useFonts({ 
+    Inter_400Regular,
+    Inter_500Medium, 
+    Inter_600SemiBold,
+    Inter_700Bold 
+  });
+  
+  // State hooks
   const [notifications, setNotifications] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [showEmergencyPopup, setShowEmergencyPopup] = useState(false)
-  const [searchPlaceholder, setSearchPlaceholder] = useState("")
   const [userName, setUserName] = useState("Hello")
-  const bellAnim = useRef(new Animated.Value(0)).current
-  const sirenAnim = useRef(new Animated.Value(0)).current
-  const introBoxWidth = useRef(new Animated.Value(32)).current
-  const introBoxOpacity = useRef(new Animated.Value(0)).current
-  const introTextOpacity = useRef(new Animated.Value(0)).current
-  const [introText, setIntroText] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [hospitalData, setHospitalData] = useState([])
 
-  useEffect(() => {
-    loadUserData();
+  // Custom hooks
+  const bellAnim = useShakeAnimation()
+  const sirenAnim = useSirenAnimation()
+  const searchPlaceholder = useSearchPlaceholder()
+  const { introBoxWidth, introBoxOpacity, introTextOpacity, introText } = useIntroAnimation(userName)
+  const hospitalCardAnimations = useRef(hospitals.map(() => new Animated.Value(0))).current
+
+  // Data fetching functions using useCallback
+  const fetchHospitalData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // First try to fetch from local storage
+      const cachedData = await AsyncStorage.getItem('hospitalData');
+      if (cachedData) {
+        setHospitalData(JSON.parse(cachedData));
+      }
+
+      // Then try to fetch from Supabase
+      const { data, error } = await supabase
+        .from('hospitals')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error("Supabase error:", error);
+        // If network fails, use the constants data as fallback
+        setHospitalData(hospitals);
+        return;
+      }
+
+      if (data) {
+        setHospitalData(data);
+        // Cache the data
+        await AsyncStorage.setItem('hospitalData', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error("Failed to fetch hospital data:", error);
+      // Use constants data as fallback
+      setHospitalData(hospitals);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
-      const userDataString = await AsyncStorage.getItem('userData');
+      const userDataString = await AsyncStorage.getItem("userData");
       if (userDataString) {
         const userData = JSON.parse(userDataString);
         setUserName(userData.name ? `Hello ${userData.name}` : "Hello");
@@ -137,137 +118,185 @@ export default function Home() {
         setUserName("Hello");
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error("Error loading user data:", error);
       setUserName("Hello");
     }
-  };
+  }, []);
 
-  useEffect(() => {
-    const shakeAnimation = Animated.sequence([
-      Animated.timing(bellAnim, {
-        toValue: 1,
-        duration: 100,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bellAnim, {
-        toValue: -1,
-        duration: 100,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bellAnim, {
-        toValue: 0,
-        duration: 100,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ])
+  // All useCallback hooks should be defined here, before any conditional returns
+  const handleSeeAllHospitals = useCallback(() => {
+    router.push('/hospitals');
+  }, [router]);
 
-    const intervalId = setInterval(() => {
-      shakeAnimation.start()
-    }, 3000)
-
-    return () => clearInterval(intervalId)
-  }, [bellAnim])
-
-  useEffect(() => {
-    const animateSiren = () => {
-      Animated.sequence([
-        Animated.timing(sirenAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sirenAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start(() => animateSiren())
+  const createSafeAnimationStyle = useCallback((animValue, index) => {
+    if (!animValue || typeof animValue.interpolate !== "function") {
+      return {};
     }
 
-    animateSiren()
-  }, [sirenAnim])
+    // First card doesn't animate
+    if (index === 0) {
+      return {
+        opacity: 1,
+        transform: [
+          { translateY: 0 },
+          { scale: 1 },
+        ],
+        shadowOpacity: 0.2,
+      };
+    }
 
-  useEffect(() => {
-    const phrase = "Search for hospitals and doctors."
-    let animationFrame
-    let startTime = Date.now()
-    const letterDuration = 150
-    const pauseDuration = 2000
+    return {
+      opacity: animValue.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 0.5, 1],
+        extrapolate: "clamp",
+      }),
+      transform: [
+        {
+          translateY: animValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [100, 0], // Cards come from bottom
+            extrapolate: "clamp",
+          }),
+        },
+        {
+          scale: animValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.95, 1],
+            extrapolate: "clamp",
+          }),
+        },
+      ],
+      shadowOpacity: animValue.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 0, 0.2],
+        extrapolate: "clamp",
+      }),
+    };
+  }, []);
 
-    const animate = () => {
-      const currentTime = Date.now()
-      const elapsed = currentTime - startTime
-      const totalDuration = phrase.length * letterDuration
-
-      if (elapsed < totalDuration) {
-        const numLetters = Math.floor(elapsed / letterDuration)
-        setSearchPlaceholder(phrase.substring(0, numLetters))
-        animationFrame = requestAnimationFrame(animate)
-      } else if (elapsed < totalDuration + pauseDuration) {
-        setSearchPlaceholder(phrase)
-        animationFrame = requestAnimationFrame(animate)
-      } else {
-        startTime = Date.now()
-        setSearchPlaceholder("")
-        animationFrame = requestAnimationFrame(animate)
+  const renderHospitalCard = useCallback(
+    (hospital, index) => {
+      if (!hospital || typeof hospital !== "object") {
+        console.warn("Invalid hospital data:", hospital);
+        return null;
       }
+
+      const animationStyle = createSafeAnimationStyle(hospitalCardAnimations[index], index) || {};
+      const imageUrl = getSupabaseImageUrl(hospital.image_path);
+      const logoUrl = getSupabaseImageUrl(hospital.logo_path);
+
+      return (
+        <Animated.View
+          key={hospital.id || `hospital-${index}`}
+          style={[styles.hospitalCardContainer, animationStyle]}
+        >
+          <TouchableOpacity
+            style={[styles.hospitalCard]}
+            onPress={() => router.push(`/hospitals/${hospital.id}`)}
+          >
+            <SkeletonImage 
+              source={imageUrl ? { uri: imageUrl } : null}
+              style={styles.hospitalImage}
+              resizeMode="cover"
+            />
+            <BlurView 
+              intensity={60}
+              tint="light"
+              style={[styles.hospitalInfoOverlay, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]}
+            >
+              <View style={styles.hospitalInfo}>
+                <View style={styles.nameContainer}>
+                  <SkeletonImage 
+                    source={logoUrl ? { uri: logoUrl } : null}
+                    style={styles.hospitalLogo}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.textContainer}>
+                    <Text style={[styles.hospitalName, { fontFamily: 'Inter_600SemiBold' }]}>{hospital.name}</Text>
+                    <Text style={[styles.hospitalLocation, { fontFamily: 'Inter_900SemiBold' }]}>{hospital.location}</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.bookNowButton}
+                onPress={() => router.push(`/hospitals/${hospital.id}`)}
+              >
+                <Text style={[styles.bookNowText, { fontFamily: 'Inter_500Medium' }]}>Book now</Text>
+              </TouchableOpacity>
+            </BlurView>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    },
+    [hospitalCardAnimations, createSafeAnimationStyle, router],
+  )
+
+  const renderHospitalCardsSection = useCallback(() => {
+    if (isLoading) {
+      return Array(3)
+        .fill()
+        .map((_, index) => <HospitalCardSkeleton key={`skeleton-${index}`} />)
     }
 
-    animate()
-
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame)
-      }
-      setSearchPlaceholder("")
+    if (!Array.isArray(hospitalData) || hospitalData.length === 0) {
+      return (
+        <View style={styles.noHospitalsContainer}>
+          <Text style={styles.noHospitalsText}>No hospitals found</Text>
+        </View>
+      )
     }
-  }, [])
+
+    return hospitalData.map(renderHospitalCard)
+  }, [isLoading, hospitalData, renderHospitalCard])
+
+  const onScrollHandler = useCallback(
+    (event) => {
+      const scrollY = event.nativeEvent.contentOffset.y;
+      hospitalData.forEach((_, index) => {
+        // Skip the first card
+        if (index === 0) return;
+
+        const cardPosition = index * 220;
+        const scrollThreshold = cardPosition - 400;
+        
+        if (scrollY > scrollThreshold) {
+          Animated.spring(hospitalCardAnimations[index], {
+            toValue: 1,
+            tension: 35, // Reduced tension for slower animation
+            friction: 8,
+            useNativeDriver: true,
+          }).start();
+        }
+      });
+    },
+    [hospitalData, hospitalCardAnimations],
+  )
+
+  // Effects
+  useEffect(() => {
+    fetchHospitalData()
+  }, [fetchHospitalData])
 
   useEffect(() => {
-    const animateIntroBox = () => {
-      // Calculate width based on text length (approximate width per character)
-      const baseWidth = 32; // Initial width
-      const charWidth = 8; // Approximate width per character
-      const padding = 40; // Extra padding for the box
-      const greetingWidth = userName.length * charWidth + padding;
-      const questionWidth = "How are you feeling today?".length * charWidth + padding;
-  
-      Animated.sequence([
-        // Fade in and expand the box to fit greeting
-        Animated.parallel([
-          Animated.timing(introBoxOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-          Animated.timing(introBoxWidth, { toValue: greetingWidth, duration: 500, useNativeDriver: false }),
-        ]),
-        // Show greeting text
-        Animated.timing(introTextOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-        // Wait for 2 seconds
-        Animated.delay(2000),
-        // Hide text
-        Animated.timing(introTextOpacity, { toValue: 0, duration: 300, useNativeDriver: false }),
-        // Expand box to fit question
-        Animated.timing(introBoxWidth, { toValue: questionWidth, duration: 300, useNativeDriver: false }),
-        // Show question text
-        Animated.timing(introTextOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-        // Wait for 3 seconds
-        Animated.delay(3000),
-        // Shrink back slowly with fade out effect
-        Animated.parallel([
-          Animated.timing(introBoxWidth, { toValue: baseWidth, duration: 1000, useNativeDriver: false }),
-          Animated.timing(introBoxOpacity, { toValue: 0, duration: 1000, useNativeDriver: false }),
-          Animated.timing(introTextOpacity, { toValue: 0, duration: 500, useNativeDriver: false }),
-        ]),
-      ]).start()
+    loadUserData()
+  }, [loadUserData])
+
+  useEffect(() => {
+    // Set first card's animation value to 1 immediately
+    if (hospitalCardAnimations[0]) {
+      hospitalCardAnimations[0].setValue(1);
     }
-  
-    animateIntroBox()
-  
-    // Change text after delay
-    setTimeout(() => setIntroText(userName), 800)
-    setTimeout(() => setIntroText("How are you feeling today?"), 3400)
-  }, [introBoxWidth, introBoxOpacity, introTextOpacity, userName])
+  }, [hospitalCardAnimations]);
+
+  // Now we can safely return early if fonts aren't loaded
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    )
+  }
 
   const handleNotification = () => {
     console.log("Notification clicked")
@@ -279,10 +308,6 @@ export default function Home() {
 
   const handleSpecialtyPress = (specialty) => {
     router.push(`/specialty/${specialty.name.toLowerCase()}`)
-  }
-
-  const handleHospitalPress = (hospital) => {
-    router.push(`/hospitals/${hospital.id}`)
   }
 
   const handleEmergency = () => {
@@ -297,91 +322,43 @@ export default function Home() {
     router.push("/profile")
   }
 
+  const shimmerAnimation = () => {
+    const shimmerTranslate = new Animated.Value(0)
+
+    Animated.loop(
+      Animated.timing(shimmerTranslate, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+    ).start()
+
+    return {
+      transform: [
+        {
+          translateX: shimmerTranslate.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-width, width],
+          }),
+        },
+      ],
+    }
+  }
+
   return (
-    <SafeAreaView style={[styles.container, typography.inter]}>
-      <ScrollView style={styles.scrollView} onScroll={handleScroll} scrollEventThrottle={16}>
-        <View style={styles.headerContainer}>
-          <View style={styles.header}>
-            <View style={styles.topRow}>
-              <TouchableOpacity onPress={handleEmergency}>
-                <View style={styles.ambulanceButton}>
-                  <Animated.View
-                    style={{
-                      opacity: sirenAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.3, 1],
-                      }),
-                    }}
-                  >
-                    <Icon name="ambulance" size={24} color="#FF0000" />
-                  </Animated.View>
-                </View>
-              </TouchableOpacity>
-              <View style={styles.rightIcons}>
-                <Animated.View
-                  style={[
-                    styles.introBox,
-                    {
-                      width: introBoxWidth,
-                      opacity: introBoxOpacity,
-                    },
-                  ]}
-                >
-                  <Animated.Text style={[styles.introText, { opacity: introTextOpacity }]}>{introText}</Animated.Text>
-                </Animated.View>
-                <TouchableOpacity onPress={handleProfile} style={styles.profileContainer}>
-                  <View style={styles.profileIcon}>
-                    <Icon name="account-circle" size={32} color="#3B39E4" />
-                  </View>
-                  <TouchableOpacity style={styles.notificationButton} onPress={handleNotification}>
-                    <Animated.View
-                      style={[
-                        styles.notificationIcon,
-                        {
-                          transform: [
-                            {
-                              rotate: bellAnim.interpolate({
-                                inputRange: [-1, 1],
-                                outputRange: ["-20deg", "20deg"],
-                              }),
-                            },
-                          ],
-                        },
-                      ]}
-                    >
-                      <Icon name="bell-outline" size={24} color="#000" />
-                      {notifications.length > 0 && (
-                        <View style={styles.notificationBadge}>
-                          <Text style={styles.notificationCount}>{notifications.length}</Text>
-                        </View>
-                      )}
-                    </Animated.View>
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={styles.title}>Find your desired specialist</Text>
-
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder={searchPlaceholder}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                <Icon name="magnify" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
+    <View style={styles.container}>
+      <Header />
+      <ScrollView 
+        style={styles.scrollView} 
+        onScroll={onScrollHandler} 
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollViewContent}
+      >
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Specialties</Text>
+            <Text style={[styles.sectionTitle, { fontFamily: 'Inter_600SemiBold' }]}>Specialties</Text>
             <TouchableOpacity onPress={() => router.push("/all-specialties")}>
-              <Text style={styles.seeAll}>See All</Text>
+              <Text style={[styles.seeAll, { fontFamily: 'Inter_400Regular' }]}>See All</Text>
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.specialtyScroll}>
@@ -395,8 +372,8 @@ export default function Home() {
                   <Icon name={specialty.icon} size={24} color="#fff" />
                 </View>
                 <View style={styles.specialtyTextContainer}>
-                  <Text style={styles.specialtyName}>{specialty.name}</Text>
-                  <Text style={styles.doctorsCount}>{specialty.doctorsAvailable} Doctors</Text>
+                  <Text style={[styles.specialtyName, { fontFamily: 'Inter_600SemiBold' }]}>{specialty.name}</Text>
+                  <Text style={[styles.doctorsCount, { fontFamily: 'Inter_400Regular' }]}>{specialty.doctorsAvailable} Doctors</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -404,7 +381,7 @@ export default function Home() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Popular Doctors</Text>
+          <Text style={[styles.sectionTitle, { fontFamily: 'Inter_600SemiBold' }]}>    Popular Doctors</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.doctorsScroll}>
             {popularDoctors.map((doctor) => (
               <View key={doctor.id} style={styles.doctorCard}>
@@ -413,18 +390,18 @@ export default function Home() {
                     <Image source={doctor.image} style={styles.doctorImage} resizeMode="cover" />
                   </View>
                   <View style={styles.doctorInfo}>
-                    <Text style={styles.doctorName} numberOfLines={1}>
+                    <Text style={[styles.doctorName, { fontFamily: 'Inter_600SemiBold' }]} numberOfLines={1}>
                       {doctor.name}
                     </Text>
                     <View style={styles.specialtyChip}>
                       <Icon name={doctor.specialtyIcon} size={14} color="#3B39E4" />
-                      <Text style={styles.specialtyText}>{doctor.specialty}</Text>
+                      <Text style={[styles.specialtyText, { fontFamily: 'Inter_400Regular' }]}>{doctor.specialty}</Text>
                     </View>
-                    <Text style={styles.fieldOfStudy} numberOfLines={2}>
+                    <Text style={[styles.fieldOfStudy, { fontFamily: 'Inter_400Regular' }]} numberOfLines={2}>
                       {doctor.fieldOfStudy}
                     </Text>
                     <TouchableOpacity style={styles.bookingButton}>
-                      <Text style={styles.bookingButtonText}>Book Now</Text>
+                      <Text style={[styles.bookingButtonText, { fontFamily: 'Inter_400Regular' }]}>Book Now</Text>
                       <Icon name="calendar-plus" size={16} color="#fff" />
                     </TouchableOpacity>
                   </View>
@@ -434,53 +411,33 @@ export default function Home() {
           </ScrollView>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.hospitalSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Nearby Hospitals</Text>
-            <TouchableOpacity onPress={() => router.push("/hospitals")}>
-              <Text style={styles.seeAll}>See All</Text>
+            <Text style={[styles.sectionTitle, { fontFamily: 'Inter_600SemiBold' }]}>Hospitals</Text>
+            <TouchableOpacity onPress={handleSeeAllHospitals}>
+              <Text style={[styles.seeAllText, { fontFamily: 'Inter_500Medium' }]}>See All</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.hospitalsContainer}>
-            {hospitals.map((hospital) => (
-              <TouchableOpacity
-                key={hospital.id}
-                style={styles.hospitalCard}
-                onPress={() => handleHospitalPress(hospital)}
-              >
-                <Image source={{ uri: hospital.image }} style={styles.hospitalImage} />
-                <View style={[styles.hospitalGradient, { backgroundColor: `${hospital.color}15` }]}>
-                  <View style={styles.hospitalContent}>
-                    <Text style={styles.hospitalName}>{hospital.name}</Text>
-                    <View style={styles.infoContainer}>
-                      <BlurView intensity={80} tint="light" style={styles.infoBlur}>
-                        <View style={styles.infoRow}>
-                          <Icon name="map-marker" size={16} color={hospital.color} />
-                          <Text style={styles.infoText}>{hospital.location}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                          <Icon name="clock-outline" size={16} color={hospital.color} />
-                          <Text style={styles.infoText}>{hospital.timing}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                          <Icon name="doctor" size={16} color={hospital.color} />
-                          <Text style={styles.infoText}>{hospital.activeDoctors} Active Doctors</Text>
-                        </View>
-                      </BlurView>
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <View style={styles.hospitalCardContainer}>{renderHospitalCardsSection()}</View>
         </View>
       </ScrollView>
 
       {showEmergencyPopup && (
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowEmergencyPopup(false)}>
+        <TouchableOpacity
+          style={{
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: "rgba(0, 0, 255, 0.5)", // Blue background with transparency
+            color: "white", // White text
+            backdropFilter: "blur(5px)", // Blur effect
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          activeOpacity={1}
+          onPress={() => setShowEmergencyPopup(false)}
+        >
           <View style={styles.emergencyPopup}>
             <View style={styles.emergencyHeader}>
-              <Text style={styles.emergencyTitle}>Emergency Contacts</Text>
+              <Text style={[styles.emergencyTitle, { fontFamily: 'Inter_700Bold' }]}>Emergency Contacts</Text>
               <TouchableOpacity onPress={() => setShowEmergencyPopup(false)}>
                 <Icon name="close" size={24} color="#333" />
               </TouchableOpacity>
@@ -488,37 +445,37 @@ export default function Home() {
 
             <ScrollView style={styles.emergencyContent}>
               <View style={styles.emergencySection}>
-                <Text style={styles.emergencySectionTitle}>Emergency Numbers</Text>
+                <Text style={[styles.emergencySectionTitle, { fontFamily: 'Inter_600SemiBold' }]}>Emergency Numbers</Text>
                 <View style={styles.contactItem}>
                   <View style={styles.contactInfo}>
                     <Icon name="phone-alert" size={24} color="#FF0000" />
-                    <Text style={styles.contactText}>Emergency Services</Text>
+                    <Text style={[styles.contactText, { fontFamily: 'Inter_400Regular' }]}>Emergency Services</Text>
                   </View>
                   <TouchableOpacity style={styles.callButton} onPress={() => handleCall("112")}>
-                    <Text style={styles.callButtonText}>112</Text>
+                    <Text style={[styles.callButtonText, { fontFamily: 'Inter_400Regular' }]}>112</Text>
                     <Icon name="phone" size={16} color="#fff" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.contactItem}>
                   <View style={styles.contactInfo}>
                     <Icon name="ambulance" size={24} color="#FF0000" />
-                    <Text style={styles.contactText}>Ambulance</Text>
+                    <Text style={[styles.contactText, { fontFamily: 'Inter_400Regular' }]}>Ambulance</Text>
                   </View>
                   <TouchableOpacity style={styles.callButton} onPress={() => handleCall("102")}>
-                    <Text style={styles.callButtonText}>102</Text>
+                    <Text style={[styles.callButtonText, { fontFamily: 'Inter_400Regular' }]}>102</Text>
                     <Icon name="phone" size={16} color="#fff" />
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.emergencySection}>
-                <Text style={styles.emergencySectionTitle}>Family Contacts</Text>
+                <Text style={[styles.emergencySectionTitle, { fontFamily: 'Inter_600SemiBold' }]}>Family Contacts</Text>
                 <View style={styles.contactItem}>
                   <View style={styles.contactInfo}>
                     <Icon name="account" size={24} color="#6C63FF" />
                     <View>
-                      <Text style={styles.contactName}>John Doe</Text>
-                      <Text style={styles.contactRelation}>Father</Text>
+                      <Text style={[styles.contactName, { fontFamily: 'Inter_600SemiBold' }]}>John Doe</Text>
+                      <Text style={[styles.contactRelation, { fontFamily: 'Inter_400Regular' }]}>Father</Text>
                     </View>
                   </View>
                   <TouchableOpacity style={styles.callButton} onPress={() => handleCall("9876543210")}>
@@ -530,110 +487,29 @@ export default function Home() {
           </View>
         </TouchableOpacity>
       )}
-    </SafeAreaView>
+    </View>
   )
 }
+
+const HospitalCardSkeleton = memo(() => (
+  <View style={styles.hospitalCardSkeleton}>
+    <View style={styles.skeletonBackground}>
+      <View style={styles.skeletonLine}></View>
+      <View style={styles.skeletonLine}></View>
+    </View>
+  </View>
+))
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F8F9FA",
   },
   scrollView: {
     flex: 1,
   },
-  headerContainer: {
-    backgroundColor: "#fff",
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3.84,
-    elevation: 3,
-    marginBottom: 20,
-  },
-  header: {
-    padding: 20,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  rightIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ambulanceButton: {
-    padding: 8,
-  },
-  profileContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  profileIcon: {
-    marginRight: 8,
-  },
-  notificationIcon: {
-    padding: 8,
-  },
-  introBox: {
-    height: 32,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "flex-start",
-    paddingLeft: 10,
-    position: "absolute",
-    right: 45,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 1.84,
-    elevation: 3,
-  },
-  introText: {
-    color: "#333",
-    fontSize: 14,
-    fontWeight: "semi-bold",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    height: 60,
-    alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 30,
-    paddingLeft: 16,
-    overflow: "hidden",
-  },
-  searchInput: {
-    flex: 1,
-    height: 48,
-    fontSize: 16,
-    color: "#000",
-  },
-  searchButton: {
-    backgroundColor: "#3B39E4",
-    height: 60,
-    width: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 30,
+  scrollViewContent: {
+    paddingBottom: 16,
   },
   section: {
     marginBottom: 24,
@@ -647,7 +523,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontFamily: 'Inter_600SemiBold',
     color: "#000",
   },
   seeAll: {
@@ -758,57 +634,102 @@ const styles = StyleSheet.create({
     backgroundColor: "#3B39E4",
     padding: 8,
     borderRadius: 8,
-    gap: 8,
+    gap: 4,
   },
   bookingButtonText: {
     color: "#fff",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
   },
-  hospitalsContainer: {
-    paddingHorizontal: 20,
+  hospitalSection: {
+    marginBottom: 24,
+  },
+  hospitalCardContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   hospitalCard: {
-    marginBottom: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-    height: 200,
+    height: 180,
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    transform: [
+      { perspective: 1000 },
+    ],
   },
   hospitalImage: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '75%',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
-  hospitalGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
+  hospitalInfoOverlay: {
+    height: '25%',
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  hospitalContent: {
-    gap: 8,
+  hospitalInfo: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hospitalLogo: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
+  textContainer: {
+    flex: 1,
   },
   hospitalName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  infoContainer: {
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  infoBlur: {
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#000',
     marginBottom: 4,
-    gap: 8,
   },
-  infoText: {
+  hospitalLocation: {
     fontSize: 12,
-    color: "#000",
+    fontFamily: 'Inter_900SemiBold',
+    color: '#000',
+  },
+  bookNowButton: {
+    backgroundColor: '#3B39E4',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bookNowText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -905,21 +826,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
-  greetingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
+  hospitalCardSkeleton: {
+    backgroundColor: "#F0F0F0",
+    borderRadius: 10,
+    marginBottom: 10,
+    padding: 15,
   },
-  greetingText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000",
-    marginRight: 8,
+  skeletonBackground: {
+    backgroundColor: "#E1E9EE",
+    borderRadius: 10,
   },
-  nameText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000",
+  skeletonLine: {
+    height: 20,
+    backgroundColor: "#E1E9EE",
+    marginVertical: 8,
+    borderRadius: 4,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: "#3B39E4",
   },
 })

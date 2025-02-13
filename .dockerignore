@@ -1,7 +1,0 @@
-node_modules
-.git
-.expo
-.expo-shared
-dist
-web-build
-.env

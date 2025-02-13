@@ -3,13 +3,45 @@ import { useRouter, usePathname } from "expo-router";
 import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, withSpring, useSharedValue, withSequence } from "react-native-reanimated";
 import { Feather, MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import React, { createContext, useState, useContext } from 'react';
+
+// Create a context for tab bar visibility
+export const TabBarContext = createContext({
+  isTabBarVisible: true,
+  setTabBarVisible: () => {},
+});
+
+// Custom hook to manage tab bar visibility
+export const useTabBar = () => {
+  const context = useContext(TabBarContext);
+  if (!context) {
+    throw new Error('useTabBar must be used within a TabBarProvider');
+  }
+  return context;
+};
+
+// Provider component to wrap the app
+export const TabBarProvider = ({ children }) => {
+  const [isTabBarVisible, setIsTabBarVisible] = useState(true);
+
+  const setTabBarVisible = (visible) => {
+    setIsTabBarVisible(visible);
+  };
+
+  return (
+    <TabBarContext.Provider value={{ isTabBarVisible, setTabBarVisible }}>
+      {children}
+    </TabBarContext.Provider>
+  );
+};
 
 // Create an animated version of TouchableOpacity
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-const CustomTabBar = () => {
+const CustomTabBar = ({ state, descriptors, navigation }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { isTabBarVisible } = useTabBar();
 
   // Shared values for animations
   const scale = useSharedValue(1);
@@ -31,8 +63,12 @@ const CustomTabBar = () => {
 
   const isRouteActive = (route) => pathname.startsWith(`/${route}`);
 
+  if (!isTabBarVisible) {
+    return null; // Don't render tab bar when not visible
+  }
+
   return (
-    <View style={styles.container}>
+    <View style={styles.tabBar}>
       <BlurView intensity={80} style={styles.blurContainer}>
         <View style={styles.content}>
           {/* Hospital Button */}
@@ -96,28 +132,26 @@ const CustomTabBar = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    bottom: Platform.OS === "ios" ? 34 : 24,
-    left: 20,
-    right: 20,
-    height: 64,
-    borderRadius: 32,
-    overflow: "hidden",
-    shadowColor: "#3b39e4",
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    height: 60,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    elevation: 8,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: -2,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   blurContainer: {
     flex: 1,
+    height: 60,
     borderRadius: 32,
-    borderWidth: 1,
-    borderColor: "rgba(147, 51, 234, 0.2)",
+    borderColor: "rgba(2, 0, 3, 0.2)",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
   },
   content: {

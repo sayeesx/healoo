@@ -1,6 +1,0 @@
-export const handleScroll = (event) => {
-  // Implement scroll handling logic here.  This example simply logs the scroll position.
-  // You might want to update state based on the scroll position to control things like tab visibility.
-  console.log("Scroll Y:", event.nativeEvent.contentOffset.y)
-}
-

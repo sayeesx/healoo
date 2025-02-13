@@ -1,92 +1,210 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Sample hospitals data with doctors
+// Update the hospitals data to include all three hospitals
 const hospitals = [
   {
     id: '1',
-    name: 'KIMS Hospital',
-    location: 'Kottakkal Main Road',
-    image: 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=2940&auto=format&fit=crop',
-    description: 'KIMS Hospital is a leading healthcare institution in Kottakkal, providing comprehensive medical services with state-of-the-art facilities.',
+    name: 'ASTER MIMS Hospital',
+    location: 'NH 66, Calicut-Thrissur Road, Kottakkal, Kerala, 676501',
+    image: 'https://www.asterhospitals.in/sites/default/files/styles/optimize_images/public/2021-01/hospital-image_1.png.webp?itok=7qR8Hcp7',
+    description: 'Aster MIMS Kottakkal is an NABH accredited multi-specialty hospital that delivers a comprehensive range of preventive, acute and outpatient services. The hospital, located in downtown Kottakkal in Kerala is ideal for people seeking treatment for various ailments, because of its excellent infrastructure and our commitment to maintain the highest standards of safety, cleanliness, integrity and honesty.',
     workingHours: {
-      regular: '9:00 AM - 9:00 PM',
+      regular: '24/7',
       emergency: '24/7'
     },
     services: [
-      'Emergency Care',
-      'Surgery',
-      'Pediatrics',
-      'Cardiology',
-      'Orthopedics',
-      'Neurology',
-      'Gynecology',
-      'Dental Care'
+      'Cardiac Sciences',
+      'Orthopaedics',
+      'Neuro Sciences',
+      'General Surgery',
+      'Child Development Centre',
+      'Medical Oncology',
+      'Endocrinology & Diabetology',
+      'Critical Care Medicine',
+      'Urology',
+      'Clinical Imaging',
+      'Paediatrics & Neonatology',
+      'Obstetrics & Gynaecology'
     ],
     doctors: [
       {
         id: '101',
-        name: 'Dr. Arun Kumar',
-        specialty: 'Cardiology',
-        image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=2940&auto=format&fit=crop',
-        experience: '15 years',
-        rating: 4.8
+        name: 'Dr. Thejus Kallarikkandi',
+        specialty: 'Critical Care Medicine',
+        image: 'https://www.asterhospitals.in/sites/default/files/2024-01/Dr.%20Thejus%20Kallarikkandi.jpg',
+        experience: '15+ years',
+        rating: 4.8,
+        designation: 'Senior Consultant & HOD - Critical Care Medicine'
       },
       {
         id: '102',
-        name: 'Dr. Priya Sharma',
-        specialty: 'Pediatrics',
+        name: 'Dr. Tahsin Neduvanchery',
+        specialty: 'Cardiology',
+        image: 'https://www.asterhospitals.in/sites/default/files/2024-01/Dr.%20Tahsin%20Neduvanchery.jpg',
+        experience: '12+ years',
+        rating: 4.9,
+        designation: 'Sr. Consultant - Interventional Cardiology'
+      },
+      {
+        id: '103',
+        name: 'Dr. Shaji KR',
+        specialty: 'Neurosurgery',
+        image: 'https://www.asterhospitals.in/sites/default/files/2024-01/best%20neurosurgeon%20in%20kerala_0.jpg',
+        experience: '15+ years',
+        rating: 4.9,
+        designation: 'Senior Consultant - Neuro & Spine Surgery'
+      },
+      {
+        id: '104',
+        name: 'Dr. Faizal M Iqbal',
+        specialty: 'Orthopaedics',
+        image: 'https://www.asterhospitals.in/sites/default/files/2024-01/orthopedic%20surgeon%20in%20kottakkal_0.jpg',
+        experience: '12+ years',
+        rating: 4.8,
+        designation: 'Sr. Consultant - Orthopaedic & Spine Surgery'
+      },
+      {
+        id: '105',
+        name: 'Dr. Dwitheeya P',
+        specialty: 'Psychology',
+        image: 'https://www.asterhospitals.in/sites/default/files/2024-01/Dr%20Dwitheeya%2C%20Child%20Psychologist_0.jpg',
+        experience: '10+ years',
+        rating: 4.7,
+        designation: 'Head of the department, Psychologist and Early Interventionist'
+      },
+      {
+        id: '106',
+        name: 'Dr. Mahesh Menon',
+        specialty: 'Gastroenterology',
+        image: 'https://www.asterhospitals.in/sites/default/files/2024-01/Dr.%20Mahesh%2C%20Gastroenterology_0.jpg',
+        experience: '15+ years',
+        rating: 4.9,
+        designation: 'Senior Consultant – Gastroenterology'
+      }
+    ],
+    contact: {
+      phone: '+91 9656000611',
+      emergency: '0483 280 7000',
+      email: 'info.ktkl@asterhospital.com'
+    }
+  },
+  {
+    id: '2',
+    name: 'ALMAS Hospital',
+    location: 'Near Bus Stand',
+    image:  require("../../../assets/hospital/almas.png"),
+    description: 'ALMAS Hospital is known for its excellent patient care and modern medical facilities, serving the community with dedication.',
+    workingHours: {
+      regular: '8:00 AM - 8:00 PM',
+      emergency: '24/7'
+    },
+    services: [
+      'Emergency Services',
+      'General Medicine',
+      'Orthopedics',
+      'ENT',
+      'Pediatrics',
+      'Gynecology',
+      'Dental',
+      'Physiotherapy'
+    ],
+    doctors: [
+      {
+        id: '201',
+        name: 'Dr. Sarah Ahmed',
+        specialty: 'General Medicine',
         image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=2940&auto=format&fit=crop',
         experience: '12 years',
         rating: 4.9
       },
       {
-        id: '103',
-        name: 'Dr. Mohammed Ali',
+        id: '202',
+        name: 'Dr. Rahul Menon',
         specialty: 'Orthopedics',
         image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=2940&auto=format&fit=crop',
         experience: '10 years',
         rating: 4.7
-      },
-      {
-        id: '104',
-        name: 'Dr. Sara John',
-        specialty: 'Neurology',
-        image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=2940&auto=format&fit=crop',
-        experience: '14 years',
-        rating: 4.8
       }
     ],
     contact: {
-      phone: '+91 1234567890',
-      email: 'info@kimshospital.com'
+      phone: '+91 9876543210',
+      email: 'info@almashospital.com'
     }
   },
-  // ... add data for other hospitals similarly
+  {
+    id: '3',
+    name: 'HMS Hospital',
+    location: 'MG Road',
+    image: "https://lh3.googleusercontent.com/p/AF1QipOyRNyXCNKsv7oGheU53iKTxotmy2NHf5rT4IRi=s680-w680-h510",
+    description: 'HMS Hospital offers comprehensive healthcare services with a focus on patient comfort and advanced medical technology.',
+    workingHours: {
+      regular: '8:30 AM - 8:30 PM',
+      emergency: '24/7'
+    },
+    services: [
+      'Emergency Care',
+      'Internal Medicine',
+      'Surgery',
+      'Cardiology',
+      'Neurology',
+      'Pediatrics',
+      'Radiology',
+      'Laboratory Services'
+    ],
+    doctors: [
+      {
+        id: '301',
+        name: 'Dr. Meera Krishnan',
+        specialty: 'Internal Medicine',
+        image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=2940&auto=format&fit=crop',
+        experience: '14 years',
+        rating: 4.8
+      },
+      {
+        id: '302',
+        name: 'Dr. Anand Kumar',
+        specialty: 'Cardiology',
+        image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=2940&auto=format&fit=crop',
+        experience: '16 years',
+        rating: 4.9
+      }
+    ],
+    contact: {
+      phone: '+91 8765432109',
+      email: 'info@hmshospital.com'
+    }
+  }
 ];
 
-const DoctorCard = ({ doctor, onPress }) => (
-  <TouchableOpacity style={styles.doctorCard} onPress={onPress}>
-    <Image source={{ uri: doctor.image }} style={styles.doctorImage} />
-    <View style={styles.doctorInfo}>
-      <Text style={styles.doctorName}>{doctor.name}</Text>
-      <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
-      <View style={styles.doctorStats}>
-        <MaterialCommunityIcons name="star" size={16} color="#FFD700" />
-        <Text style={styles.doctorRating}>{doctor.rating}</Text>
-        <Text style={styles.doctorExperience}>{doctor.experience}</Text>
+const DoctorCard = ({ doctor }) => {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <View style={styles.doctorCard}>
+      <Image 
+        source={typeof doctor.image === 'string' ? { uri: doctor.image } : doctor.image}
+        style={styles.doctorImage}
+        resizeMode="cover"
+        onError={() => setImageError(true)}
+      />
+      <View style={styles.doctorInfo}>
+        <Text style={styles.doctorName}>{doctor.name}</Text>
+        <Text style={styles.doctorRole}>{doctor.designation || doctor.role}</Text>
+        <Text style={styles.doctorSpeciality}>{doctor.specialty || doctor.speciality}</Text>
       </View>
     </View>
-  </TouchableOpacity>
-);
+  );
+};
 
-export default function HospitalDetail() {
+const HospitalDetail = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  
   const hospital = hospitals.find(h => h.id === id);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   if (!hospital) {
     return (
@@ -96,9 +214,25 @@ export default function HospitalDetail() {
     );
   }
 
+  const handleSeeAllPress = () => {
+    router.push({
+      pathname: `/hospitals/${id}/all-doctors`,
+    });
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <Image source={{ uri: hospital.image }} style={styles.image} />
+      <View style={styles.imageContainer}>
+        <Image 
+          source={typeof hospital.image === 'string' ? { uri: hospital.image } : hospital.image}
+          style={[styles.image, !imageLoaded && styles.hiddenImage]} 
+          onLoad={() => setImageLoaded(true)}
+          onError={() => {
+            setImageError(true);
+            setImageLoaded(true);
+          }}
+        />
+      </View>
       
       <View style={styles.content}>
         <Text style={styles.name}>{hospital.name}</Text>
@@ -151,12 +285,12 @@ export default function HospitalDetail() {
         {/* Top Doctors Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Top Doctors</Text>
+            <Text style={styles.sectionTitle}>Our Doctors</Text>
             <TouchableOpacity 
-              onPress={() => router.push(`/hospitals/${id}/doctors`)}
+              onPress={handleSeeAllPress}
               style={styles.seeAllButton}
             >
-              <Text style={styles.seeAllText}>See All</Text>
+              <Text style={styles.seeAllText}>See All Doctors</Text>
             </TouchableOpacity>
           </View>
           <ScrollView 
@@ -164,12 +298,8 @@ export default function HospitalDetail() {
             showsHorizontalScrollIndicator={false}
             style={styles.doctorsScroll}
           >
-            {hospital.doctors.map((doctor) => (
-              <DoctorCard
-                key={doctor.id}
-                doctor={doctor}
-                onPress={() => router.push(`/doctors/${doctor.id}`)}
-              />
+            {hospital.doctors?.slice(0, 5).map((doctor, index) => (
+              <DoctorCard key={index} doctor={doctor} />
             ))}
           </ScrollView>
         </View>
@@ -189,16 +319,20 @@ export default function HospitalDetail() {
       </View>
     </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  image: {
+  imageContainer: {
     width: '100%',
     height: 250,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   content: {
     padding: 20,
@@ -220,7 +354,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   section: {
-    marginTop: 24,
+    marginVertical: 20,
+    paddingHorizontal: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -229,7 +364,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
@@ -285,14 +420,14 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   doctorsScroll: {
-    marginLeft: -20,
+    marginTop: 12,
   },
   doctorCard: {
     width: 200,
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginLeft: 20,
-    marginBottom: 8,
+    marginRight: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -305,8 +440,7 @@ const styles = StyleSheet.create({
   doctorImage: {
     width: '100%',
     height: 150,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    backgroundColor: '#f0f0f0',
   },
   doctorInfo: {
     padding: 12,
@@ -317,30 +451,24 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  doctorSpecialty: {
-    fontSize: 14,
+  doctorRole: {
+    fontSize: 12,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  doctorStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  doctorRating: {
+  doctorSpeciality: {
     fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
-    marginRight: 8,
-  },
-  doctorExperience: {
-    fontSize: 14,
-    color: '#666',
+    color: '#0284C7',
+    fontWeight: '500',
   },
   seeAllButton: {
-    padding: 8,
+    backgroundColor: '#0284C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   seeAllText: {
-    color: '#6B4EFF',
+    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -357,4 +485,9 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
   },
+  hiddenImage: {
+    opacity: 0,
+  },
 });
+
+export default HospitalDetail;
