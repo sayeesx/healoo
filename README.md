@@ -1,50 +1,63 @@
-# Welcome to your Expo app 👋
+# 🩺 Healoo – Doctor Dashboard for Exquio
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Healoo** is the official **doctor dashboard** web application for the **Exquio** mobile healthcare system. It allows doctors to securely log in, manage their availability, and interact with patient appointments — all backed by **Supabase** with a PostgreSQL database and real-time updates.
 
-## Get started
+---
 
-1. Install dependencies
 
-   ```bash
-   npm install
-   ```
+## 🧠 Purpose
 
-2. Start the app
+This dashboard empowers doctors to:
+- Log in securely
+- Add or update their availability (timing)
+- View scheduled slots
+- Sync directly with the Exquio mobile app
 
-   ```bash
-    npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## ⚙️ Tech Stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Layer       | Tools Used                          |
+|-------------|-------------------------------------|
+| Framework   | Next.js (React)                     |
+| Styling     | Tailwind CSS                        |
+| Backend     | Supabase (PostgreSQL + Auth)        |
+| Auth        | Supabase Auth (email/password)      |
+| Hosting     | Vercel *(optional)*                 |
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+✅ Features Completed
+ Doctor authentication
 
-When you're ready, run:
+ View/edit availability slots
 
-```bash
-npm run reset-project
-```
+ Supabase database integration
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+ Realtime sync of data
 
-## Learn more
+🚧 Upcoming Features
+ Doctor appointment viewer
 
-To learn more about developing your project with Expo, look at the following resources:
+ Notifications (email/SMS)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+ Doctor profile editing
 
-## Join the community
+ Admin approval system
 
-Join our community of developers creating universal apps.
+ Analytics dashboard
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+🧩 Connected Projects
+📱 Exquio Mobile App (React Native)
+
+🤖 Sayees Chatbot
+
+👨‍⚕️ Built By
+Sayees
+🔗 sayees.vercel.app
+
+© 2025 Healoo – All rights reserved.
+
+yaml
+Copy
+Edit
